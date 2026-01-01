@@ -357,6 +357,35 @@
       }
     }
 
+    /* Global Music Button - floating */
+    .music-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      border: 2px solid rgba(255,255,255,0.3);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .music-toggle:hover {
+      background: rgba(0,0,0,0.9);
+      transform: scale(1.1);
+    }
+    .music-toggle:active {
+      transform: scale(0.95);
+    }
+
     .hint {
       width: min(560px, 100%);
       text-align: center;
@@ -579,6 +608,9 @@
 </head>
 
 <body>
+  <!-- Global Music Toggle Button -->
+  <button class="music-toggle" id="globalMusicBtn">🔊</button>
+
   <!-- ===== NICKNAME SCREEN ===== -->
   <div class="screen active" id="nicknameScreen">
     <div class="screen-title">🥷 RPGTURK Runner v1.0</div>
@@ -875,7 +907,6 @@
         <button class="ctrlBtn" id="btnMenu">🏠 Menü</button>
         <button class="ctrlBtn" id="btnLeaderboard">🏆</button>
         <button class="ctrlBtn" id="btnFullscreen">⛶</button>
-        <button class="ctrlBtn" id="btnMusic">🔊</button>
         <button class="ctrlBtn" id="btnJump">⬆️ Zıpla</button>
         <button class="ctrlBtn" id="btnCrouch">⬇️ Eğil</button>
       </div>
@@ -1484,11 +1515,11 @@
   const btnMenu = document.getElementById('btnMenu');
   const btnLeaderboard = document.getElementById('btnLeaderboard');
   const btnFullscreen = document.getElementById('btnFullscreen');
-  const btnMusic = document.getElementById('btnMusic');
   const btnJump = document.getElementById('btnJump');
   const btnCrouch = document.getElementById('btnCrouch');
 
-  // Music
+  // Music - global button
+  const globalMusicBtn = document.getElementById('globalMusicBtn');
   const bgMusic = document.getElementById('bgMusic');
   let musicPlaying = false;
   bgMusic.volume = 0.4;
@@ -1969,7 +2000,7 @@
     // Start music when game starts
     if (!musicPlaying) {
       bgMusic.play().catch(() => {});
-      btnMusic.textContent = '🔊';
+      globalMusicBtn.textContent = '🔊';
       musicPlaying = true;
     }
   }
@@ -2814,16 +2845,16 @@
   function toggleMusic() {
     if (musicPlaying) {
       bgMusic.pause();
-      btnMusic.textContent = '🔇';
+      globalMusicBtn.textContent = '🔇';
       musicPlaying = false;
     } else {
       bgMusic.play().catch(() => {});
-      btnMusic.textContent = '🔊';
+      globalMusicBtn.textContent = '🔊';
       musicPlaying = true;
     }
   }
 
-  btnMusic.addEventListener('click', toggleMusic);
+  globalMusicBtn.addEventListener('click', toggleMusic);
 
   // Fullscreen değişikliğini dinle
   document.addEventListener('fullscreenchange', () => {
