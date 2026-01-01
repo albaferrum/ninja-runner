@@ -162,6 +162,29 @@
       padding: 12px;
       justify-items: center;
       align-items: start;
+      background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+    }
+
+    /* Fullscreen mode */
+    .game-wrap:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      padding: 20px;
+    }
+    .game-wrap:fullscreen #game {
+      max-height: 80vh;
+      width: auto !important;
+      height: auto !important;
+    }
+    .game-wrap:-webkit-full-screen {
+      width: 100vw;
+      height: 100vh;
+      padding: 20px;
+    }
+    .game-wrap:-webkit-full-screen #game {
+      max-height: 80vh;
+      width: auto !important;
+      height: auto !important;
     }
 
     .hud {
@@ -511,7 +534,7 @@
           <!-- <div class="char-desc">Ay ışığında parlayan afet.<br/>Mızrak ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Mızrak uzatma (3s)<br/>
-            <b>F:</b> Ay Işığı Patlaması (20s)
+            <b>C:</b> Ay Işığı Patlaması (20s)
           </div>
         </div>
       </div>
@@ -524,7 +547,7 @@
           <!-- <div class="char-desc">Karanlığın pençesi.<br/>Shuriken ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Shuriken fırlat (3s)<br/>
-            <b>F:</b> Kartal Uçuşu (20s)
+            <b>C:</b> Kartal Uçuşu (20s)
           </div>
         </div>
       </div>
@@ -537,7 +560,7 @@
           <!-- <div class="char-desc">Tavşancık.<br/>Buz ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Su topu fırlat (3s)<br/>
-            <b>F:</b> Buz Kalkanı (20s)
+            <b>C:</b> Buz Kalkanı (20s)
           </div>
         </div>
       </div>
@@ -550,7 +573,7 @@
           <!-- <div class="char-desc">Minik mor ninja<br/>Hızlı Adımlar</div> -->
           <div class="char-skills">
             <b>X:</b> Katana darbesi (1.5s)<br/>
-            <b>F:</b> Kılıç Fırtınası (20s)
+            <b>C:</b> Kılıç Fırtınası (20s)
           </div>
         </div>
       </div>
@@ -563,7 +586,7 @@
           <!-- <div class="char-desc">Dev kaslı ninja<br/>Aygır</div> -->
           <div class="char-skills">
             <b>X:</b> Yumruk (1.5s)<br/>
-            <b>F:</b> Uçan Kafa(20s)
+            <b>C:</b> Uçan Kafa(20s)
           </div>
         </div>
       </div>
@@ -576,7 +599,7 @@
           <!-- <div class="char-desc">Zayıf zehir ustası<br/>Zehir Ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Zehir Mermisi (4s)<br/>
-            <b>F:</b> Maymun Dostum (20s)
+            <b>C:</b> Maymun Dostum (20s)
           </div>
         </div>
       </div>
@@ -589,7 +612,7 @@
           <!-- <div class="char-desc">Tıbbi usta<br/>Şifacı Ninja</div> -->
           <div class="char-skills">
             <b>X:</b> İğne Yağmuru (3s)<br/>
-            <b>F:</b> Hayvan Dostlarım (20s)
+            <b>C:</b> Hayvan Dostlarım (20s)
           </div>
         </div>
       </div>
@@ -602,7 +625,7 @@
           <!-- <div class="char-desc">İlüzyon ustası<br/>Uzun boylu</div> -->
           <div class="char-skills">
             <b>X:</b> Göz Işını (3s)<br/>
-            <b>F:</b> İlüzyon Fırtınası (20s)
+            <b>C:</b> İlüzyon Fırtınası (20s)
           </div>
         </div>
       </div>
@@ -615,7 +638,7 @@
           <!-- <div class="char-desc">Rüzgar ustası<br/>Mor saçlı</div> -->
           <div class="char-skills">
             <b>X:</b> Hava Dalgası (3s)<br/>
-            <b>F:</b> Rüzgar Kılıcı (20s)
+            <b>C:</b> Rüzgar Kılıcı (20s)
           </div>
         </div>
       </div>
@@ -628,7 +651,7 @@
           <!-- <div class="char-desc">Karga ustası<br/>Gri elbiseli</div> -->
           <div class="char-skills">
             <b>X:</b> Karga Tüyü (4s)<br/>
-            <b>F:</b> Karanlık Güç (20s)
+            <b>C:</b> Karanlık Güç (20s)
           </div>
         </div>
       </div>
@@ -641,7 +664,7 @@
           <!-- <div class="char-desc">Kağıt ustası<br/>Uzun siyah saçlı</div> -->
           <div class="char-skills">
             <b>X:</b> Kağıt Fırlatma (3s)<br/>
-            <b>F:</b> Kağıt Kanatlar (20s)
+            <b>C:</b> Kağıt Kanatlar (20s)
           </div>
         </div>
       </div>
@@ -654,7 +677,7 @@
           <!-- <div class="char-desc">Güzel sarışın<br/>Alev ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Öpücük (3s)<br/>
-            <b>F:</b> Alev Ejderi (20s)
+            <b>C:</b> Alev Ejderi (20s)
           </div>
         </div>
       </div>
@@ -667,7 +690,7 @@
           <!-- <div class="char-desc">Sarışın ilüzyonist<br/>Mistik ninja</div> -->
           <div class="char-skills">
             <b>X:</b> İlüzyon (3s)<br/>
-            <b>F:</b> Mistik Şimşek (20s)
+            <b>C:</b> Mistik Şimşek (20s)
           </div>
         </div>
       </div>
@@ -680,7 +703,7 @@
           <!-- <div class="char-desc">Minik okçu<br/>Beyaz saçlı</div> -->
           <div class="char-skills">
             <b>X:</b> Ok Atışı (2.5s)<br/>
-            <b>F:</b> Ok Yağmuru (20s)
+            <b>C:</b> Ok Yağmuru (20s)
           </div>
         </div>
       </div>
@@ -693,7 +716,7 @@
           <!-- <div class="char-desc">Mor saçlı uzun<br/>Klon ustası</div> -->
           <div class="char-skills">
             <b>X:</b> Kunai (2s)<br/>
-            <b>F:</b> Gölge Klon (20s)
+            <b>C:</b> Gölge Klon (20s)
           </div>
         </div>
       </div>
@@ -769,12 +792,12 @@
 
       <div class="skill-bar">
         <button class="skill-btn skill-x" id="btnSkillX">
-          <span class="skill-icon">⚔️</span> <span id="skillXName">Yetenek</span>
+          <span class="skill-icon">⚔️</span> <span id="skillXName">Yetenek</span> <b>[X]</b>
           <div class="cd-bar" style="width: 100%;"></div>
           <span class="cd-text" id="cdTextX"></span>
         </button>
         <button class="skill-btn skill-f" id="btnSkillF">
-          <span class="skill-icon">🌟</span> <span id="skillFName">Ultimate</span>
+          <span class="skill-icon">🌟</span> <span id="skillFName">Ultimate</span> <b>[C]</b>
           <div class="cd-bar" style="width: 100%;"></div>
           <span class="cd-text" id="cdTextF"></span>
         </button>
@@ -783,12 +806,13 @@
       <div class="controls">
         <button class="ctrlBtn" id="btnMenu">🏠 Menü</button>
         <button class="ctrlBtn" id="btnLeaderboard">🏆</button>
+        <button class="ctrlBtn" id="btnFullscreen">⛶</button>
         <button class="ctrlBtn" id="btnJump">⬆️ Zıpla</button>
         <button class="ctrlBtn" id="btnCrouch">⬇️ Eğil</button>
       </div>
 
       <div class="hint">
-        <b>Zıpla:</b> Space/↑/W • <b>Eğil:</b> ↓/S • <b>Yetenek:</b> X • <b>Ulti:</b> F
+        <b>Zıpla:</b> Space/↑/W • <b>Eğil:</b> ↓/S • <b>Yetenek:</b> X • <b>Ulti:</b> C
       </div>
     </div>
   </div>
@@ -1385,6 +1409,7 @@
 
   const btnMenu = document.getElementById('btnMenu');
   const btnLeaderboard = document.getElementById('btnLeaderboard');
+  const btnFullscreen = document.getElementById('btnFullscreen');
   const btnJump = document.getElementById('btnJump');
   const btnCrouch = document.getElementById('btnCrouch');
 
@@ -2244,13 +2269,43 @@
     showScreen('charSelect');
   });
 
+  // Fullscreen toggle
+  function toggleFullscreen() {
+    const gameWrap = document.querySelector('.game-wrap');
+    if (!document.fullscreenElement) {
+      if (gameWrap.requestFullscreen) {
+        gameWrap.requestFullscreen();
+      } else if (gameWrap.webkitRequestFullscreen) {
+        gameWrap.webkitRequestFullscreen();
+      } else if (gameWrap.msRequestFullscreen) {
+        gameWrap.msRequestFullscreen();
+      }
+      btnFullscreen.textContent = '⛶';
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+      btnFullscreen.textContent = '⛶';
+    }
+  }
+
+  btnFullscreen.addEventListener('click', toggleFullscreen);
+
+  // Fullscreen değişikliğini dinle
+  document.addEventListener('fullscreenchange', () => {
+    btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶';
+    setTimeout(resizeCanvas, 100);
+  });
+
   window.addEventListener('keydown', (e) => {
     if (screens.game.classList.contains('active')) {
       const k = e.key.toLowerCase();
       if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); jump(); }
       if (k === 'arrowdown' || k === 's') { e.preventDefault(); crouch(true); }
       if (k === 'x') { e.preventDefault(); useSkillX(); }
-      if (k === 'f') { e.preventDefault(); useSkillF(); }
+      if (k === 'c') { e.preventDefault(); useSkillF(); }
       if (k === 'r') { e.preventDefault(); resetGame(); }
     }
   });
