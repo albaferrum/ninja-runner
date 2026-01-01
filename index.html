@@ -1,0 +1,5435 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>RPGTurk Ninja Runner v1.0</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { 
+      height: 100%; 
+      background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #0f0f1a 100%);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; 
+      overflow: hidden;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .screen.active { display: flex; }
+
+    .screen-title {
+      font-size: 42px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 30px rgba(255,100,100,0.5);
+      margin-bottom: 10px;
+    }
+    .screen-subtitle {
+      font-size: 16px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 30px;
+    }
+
+    /* ===== NICKNAME SCREEN ===== */
+    #nicknameScreen {
+      background: radial-gradient(ellipse at center, rgba(80,20,80,0.3) 0%, transparent 70%),
+                  linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+    }
+    .nick-input {
+      width: min(320px, 90%);
+      padding: 16px 20px;
+      font-size: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      text-align: center;
+      outline: none;
+      margin-bottom: 20px;
+    }
+    .nick-input:focus {
+      border-color: rgba(255,100,100,0.6);
+      box-shadow: 0 0 20px rgba(255,100,100,0.2);
+    }
+    .nick-input::placeholder { color: rgba(255,255,255,0.3); }
+
+    .btn {
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,100,100,0.4); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ===== CHARACTER SELECT SCREEN ===== */
+    #charSelectScreen {
+      background: radial-gradient(ellipse at center, rgba(20,60,100,0.3) 0%, transparent 70%),
+                  linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+      overflow-y: auto;
+      justify-content: flex-start;
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      width: min(900px, 95%);
+      margin-bottom: 25px;
+    }
+    .char-card {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px 12px;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-align: center;
+    }
+    .char-card:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-4px);
+    }
+    .char-card.selected {
+      border-color: #ff6b6b;
+      background: rgba(255,100,100,0.15);
+      box-shadow: 0 0 30px rgba(255,100,100,0.3);
+    }
+    .char-avatar {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+    .char-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .char-desc {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.4;
+    }
+    .char-skills {
+      margin-top: 10px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+      text-align: left;
+      background: rgba(0,0,0,0.2);
+      padding: 8px;
+      border-radius: 8px;
+    }
+    .char-skills b { color: #ff9f43; }
+
+    /* ===== GAME SCREEN ===== */
+    #gameScreen { z-index: 1; }
+
+    .game-wrap {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      gap: 10px;
+      padding: 12px;
+      justify-items: center;
+      align-items: start;
+    }
+
+    .hud {
+      width: min(560px, 100%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      color: rgba(255,255,255,.9);
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    canvas {
+      width: min(560px, 100%);
+      height: auto;
+      max-height: 60vh;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 70px rgba(0,0,0,.55);
+      background: radial-gradient(900px 700px at 50% 0%, #12162a 0%, #0b0d12 60%, #070910 100%);
+      touch-action: none;
+    }
+
+    .skill-bar {
+      width: min(560px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .skill-btn {
+      position: relative;
+      padding: 16px 12px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.15s;
+      touch-action: manipulation;
+    }
+    .skill-btn.skill-x {
+      background: linear-gradient(135deg, rgba(255,150,50,0.3) 0%, rgba(200,100,50,0.2) 100%);
+    }
+    .skill-btn.skill-f {
+      background: linear-gradient(135deg, rgba(150,50,255,0.3) 0%, rgba(100,50,200,0.2) 100%);
+    }
+    .skill-btn:active { transform: scale(0.97); }
+    .skill-btn.cooldown { opacity: 0.5; }
+    .skill-btn .cd-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ff9f43, #ffc107);
+      transition: width 0.1s linear;
+    }
+    .skill-btn.skill-f .cd-bar {
+      background: linear-gradient(90deg, #a855f7, #7c3aed);
+    }
+    .skill-btn .cd-text {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .controls {
+      width: min(560px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .ctrlBtn {
+      border-radius: 14px;
+      padding: 14px 12px;
+      font-size: 15px;
+      font-weight: 800;
+      color: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(8px);
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      cursor: pointer;
+    }
+    .ctrlBtn:active { transform: translateY(1px); background: rgba(255,255,255,.11); }
+
+    .hint {
+      width: min(560px, 100%);
+      text-align: center;
+      color: rgba(255,255,255,.7);
+      font-size: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,.03);
+      border-radius: 10px;
+      line-height: 1.4;
+    }
+
+    /* Ultimate active effects */
+    .ult-active {
+      animation: ultPulse 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes ultPulse {
+      from { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+      to { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
+    }
+
+    /* ===== LOCATION SELECT SCREEN ===== */
+    #locationSelectScreen {
+      background: radial-gradient(ellipse at center, rgba(20,80,60,0.3) 0%, transparent 70%),
+                  linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+    }
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: min(700px, 95%);
+      margin-bottom: 30px;
+    }
+    .location-card {
+      background: rgba(255,255,255,0.05);
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+      overflow: hidden;
+    }
+    .location-card:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-6px) scale(1.02);
+    }
+    .location-card.selected {
+      border-color: #2ecc71;
+      background: rgba(46,204,113,0.15);
+      box-shadow: 0 0 40px rgba(46,204,113,0.4);
+    }
+    .location-preview {
+      width: 100%;
+      height: 120px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      font-size: 50px;
+      position: relative;
+      overflow: hidden;
+    }
+    .location-preview.dark {
+      background: linear-gradient(180deg, #0b0d12 0%, #12162a 50%, #1a1a2e 100%);
+    }
+    .location-preview.forest {
+      background: linear-gradient(180deg, #87ceeb 0%, #98d8c8 30%, #2d5016 70%, #1a3d0c 100%);
+    }
+    .location-preview.mountain {
+      background: linear-gradient(180deg, #f9a825 0%, #ffcc80 30%, #8d6e63 60%, #5d4037 100%);
+    }
+    .location-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .location-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.4;
+    }
+    @media (max-width: 600px) {
+      .location-grid { grid-template-columns: 1fr; gap: 15px; }
+      .location-preview { height: 100px; }
+    }
+
+    /* Scrollbar styling */
+    #charSelectScreen::-webkit-scrollbar {
+      width: 8px;
+    }
+    #charSelectScreen::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    #charSelectScreen::-webkit-scrollbar-thumb {
+      background: rgba(255,100,100,0.4);
+      border-radius: 4px;
+    }
+    #charSelectScreen::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,100,100,0.6);
+    }
+
+    /* ===== LEADERBOARD STYLES ===== */
+    #leaderboardScreen {
+      background: radial-gradient(ellipse at center, rgba(255,200,50,0.2) 0%, transparent 70%),
+                  linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+    }
+    .leaderboard-container {
+      width: min(500px, 95%);
+      max-height: 60vh;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 50px 1fr 80px 100px;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .leaderboard-row:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .leaderboard-row.current-player {
+      background: rgba(255,100,100,0.2);
+      border: 2px solid rgba(255,100,100,0.5);
+    }
+    .leaderboard-row.top-1 { background: linear-gradient(90deg, rgba(255,215,0,0.3), transparent); }
+    .leaderboard-row.top-2 { background: linear-gradient(90deg, rgba(192,192,192,0.3), transparent); }
+    .leaderboard-row.top-3 { background: linear-gradient(90deg, rgba(205,127,50,0.3), transparent); }
+    .rank {
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffd700;
+      text-align: center;
+    }
+    .rank.top-1 { color: #ffd700; font-size: 22px; }
+    .rank.top-2 { color: #c0c0c0; }
+    .rank.top-3 { color: #cd7f32; }
+    .player-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-char {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+    }
+    .player-score {
+      font-size: 18px;
+      font-weight: 800;
+      color: #2ecc71;
+      text-align: right;
+    }
+    .leaderboard-empty {
+      text-align: center;
+      color: rgba(255,255,255,0.5);
+      padding: 40px;
+      font-size: 16px;
+    }
+    .leaderboard-header {
+      display: grid;
+      grid-template-columns: 50px 1fr 80px 100px;
+      gap: 10px;
+      padding: 10px 15px;
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .btn-secondary {
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .char-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .char-card { padding: 12px 8px; }
+      .char-avatar { width: 50px; height: 50px; font-size: 26px; margin-bottom: 8px; }
+      .char-name { font-size: 14px; }
+      .char-desc { font-size: 9px; }
+      .char-skills { font-size: 8px; padding: 6px; }
+      .screen-title { font-size: 32px; }
+    }
+    @media (max-width: 400px) {
+      .char-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .char-card { padding: 10px 6px; }
+      .char-avatar { width: 40px; height: 40px; font-size: 22px; margin-bottom: 6px; }
+      .char-name { font-size: 12px; }
+      .char-desc { display: none; }
+      .char-skills { font-size: 7px; padding: 5px; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== NICKNAME SCREEN ===== -->
+  <div class="screen active" id="nicknameScreen">
+    <div class="screen-title">🥷 RPGTURK Runner v1.0</div>
+    <div class="screen-subtitle">Gölgelerde koş, düşmanları alt et!</div>
+    <input type="text" class="nick-input" id="nickInput" placeholder="Nickname gir..." maxlength="16" autocomplete="off" />
+    <button class="btn" id="nickBtn" disabled>Devam Et →</button>
+  </div>
+
+  <!-- ===== CHARACTER SELECT SCREEN ===== -->
+  <div class="screen" id="charSelectScreen">
+    <div class="screen-title">Ninja Seç</div>
+    <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
+    
+    <div class="char-grid">
+      <!-- Haru -->
+      <div class="char-card" data-char="haru">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #e0e0e0, #9e9e9e);">🗡️</div>
+        <div>
+          <div class="char-name">Haru</div>
+          <!-- <div class="char-desc">Ay ışığında parlayan afet.<br/>Mızrak ustası</div> -->
+          <div class="char-skills">
+            <b>X:</b> Mızrak uzatma (3s)<br/>
+            <b>F:</b> Ay Işığı Patlaması (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Ringo -->
+      <div class="char-card" data-char="ringo">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #42a5f5, #1565c0);">⭐</div>
+        <div>
+          <div class="char-name">Ringo</div>
+          <!-- <div class="char-desc">Karanlığın pençesi.<br/>Shuriken ustası</div> -->
+          <div class="char-skills">
+            <b>X:</b> Shuriken fırlat (3s)<br/>
+            <b>F:</b> Kartal Uçuşu (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Usagi -->
+      <div class="char-card" data-char="usagi">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #ffeb3b, #ffc107);">💧</div>
+        <div>
+          <div class="char-name">Usagi</div>
+          <!-- <div class="char-desc">Tavşancık.<br/>Buz ustası</div> -->
+          <div class="char-skills">
+            <b>X:</b> Su topu fırlat (3s)<br/>
+            <b>F:</b> Buz Kalkanı (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Chisa -->
+      <div class="char-card" data-char="chisa">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">⚔️</div>
+        <div>
+          <div class="char-name">Chisa</div>
+          <!-- <div class="char-desc">Minik mor ninja<br/>Hızlı Adımlar</div> -->
+          <div class="char-skills">
+            <b>X:</b> Katana darbesi (1.5s)<br/>
+            <b>F:</b> Kılıç Fırtınası (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Butsuo -->
+      <div class="char-card" data-char="butsuo">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #ecf0f1, #bdc3c7);">👊</div>
+        <div>
+          <div class="char-name">Butsuo</div>
+          <!-- <div class="char-desc">Dev kaslı ninja<br/>Aygır</div> -->
+          <div class="char-skills">
+            <b>X:</b> Yumruk (1.5s)<br/>
+            <b>F:</b> Uçan Kafa(20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Teki -->
+      <div class="char-card" data-char="teki">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #27ae60, #1e8449);">☠️</div>
+        <div>
+          <div class="char-name">Teki</div>
+          <div class="char-desc">Zayıf zehir ustası<br/>Zehir Ustası</div>
+          <div class="char-skills">
+            <b>X:</b> Zehir Mermisi (4s)<br/>
+            <b>F:</b> Zehir Zırhı (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Susumu -->
+      <div class="char-card" data-char="susumu">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">💉</div>
+        <div>
+          <div class="char-name">Susumu</div>
+          <!-- <div class="char-desc">Tıbbi usta<br/>Şifacı Ninja</div> -->
+          <div class="char-skills">
+            <b>X:</b> İğne Yağmuru (3s)<br/>
+            <b>F:</b> Maymun Dostum (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Shinji -->
+      <div class="char-card" data-char="shinji">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">👁️</div>
+        <div>
+          <div class="char-name">Shinji</div>
+          <!-- <div class="char-desc">İlüzyon ustası<br/>Uzun boylu</div> -->
+          <div class="char-skills">
+            <b>X:</b> Göz Işını (3s)<br/>
+            <b>F:</b> İlüzyon Fırtınası (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Kazuya -->
+      <div class="char-card" data-char="kazuya">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #8e44ad, #6c3483);">💨</div>
+        <div>
+          <div class="char-name">Kazuya</div>
+          <!-- <div class="char-desc">Rüzgar ustası<br/>Mor saçlı</div> -->
+          <div class="char-skills">
+            <b>X:</b> Hava Dalgası (3s)<br/>
+            <b>F:</b> Rüzgar Kılıcı (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Togami -->
+      <div class="char-card" data-char="togami">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #3498db, #555);">🪶</div>
+        <div>
+          <div class="char-name">Togami</div>
+          <!-- <div class="char-desc">Karga ustası<br/>Gri elbiseli</div> -->
+          <div class="char-skills">
+            <b>X:</b> Karga Tüyü (4s)<br/>
+            <b>F:</b> Karanlık Güç (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Kagi -->
+      <div class="char-card" data-char="kagi">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #ecf0f1, #bdc3c7);">📄</div>
+        <div>
+          <div class="char-name">Kagi</div>
+          <!-- <div class="char-desc">Kağıt ustası<br/>Uzun siyah saçlı</div> -->
+          <div class="char-skills">
+            <b>X:</b> Kağıt Fırlatma (3s)<br/>
+            <b>F:</b> Kağıt Kanatlar (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Akemi -->
+      <div class="char-card" data-char="akemi">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #ff69b4, #f1c40f);">💋</div>
+        <div>
+          <div class="char-name">Akemi</div>
+          <!-- <div class="char-desc">Güzel sarışın<br/>Alev ustası</div> -->
+          <div class="char-skills">
+            <b>X:</b> Öpücük (3s)<br/>
+            <b>F:</b> Alev Ejderi (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Ryoken -->
+      <div class="char-card" data-char="ryoken">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #9b59b6, #f1c40f);">👁️</div>
+        <div>
+          <div class="char-name">Ryoken</div>
+          <!-- <div class="char-desc">Sarışın ilüzyonist<br/>Mistik ninja</div> -->
+          <div class="char-skills">
+            <b>X:</b> İlüzyon (3s)<br/>
+            <b>F:</b> Mistik Şimşek (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Riku -->
+      <div class="char-card" data-char="riku">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #3498db, #fff);">🏹</div>
+        <div>
+          <div class="char-name">Riku</div>
+          <!-- <div class="char-desc">Minik okçu<br/>Beyaz saçlı</div> -->
+          <div class="char-skills">
+            <b>X:</b> Ok Atışı (2.5s)<br/>
+            <b>F:</b> Ok Yağmuru (20s)
+          </div>
+        </div>
+      </div>
+
+      <!-- Joaryu -->
+      <div class="char-card" data-char="joaryu">
+        <div class="char-avatar" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">👥</div>
+        <div>
+          <div class="char-name">Joaryu</div>
+          <!-- <div class="char-desc">Mor saçlı uzun<br/>Klon ustası</div> -->
+          <div class="char-skills">
+            <b>X:</b> Kunai (2s)<br/>
+            <b>F:</b> Gölge Klon (20s)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
+  </div>
+
+  <!-- ===== LOCATION SELECT SCREEN ===== -->
+  <div class="screen" id="locationSelectScreen">
+    <div class="screen-title">🏔️ Mekan Seç</div>
+    <div class="screen-subtitle">Maceranın geçeceği yeri seç!</div>
+    
+    <div class="location-grid">
+      <!-- Dark Night -->
+      <div class="location-card selected" data-location="dark">
+        <div class="location-preview dark">🌙</div>
+        <div class="location-name">Karanlık Gece</div>
+        <div class="location-desc">Ay ışığında gizli geçitler.<br/>Klasik ninja ortamı.</div>
+      </div>
+
+      <!-- Forest -->
+      <div class="location-card" data-location="forest">
+        <div class="location-preview forest">🌲</div>
+        <div class="location-name">Orman</div>
+        <div class="location-desc">Aydınlık ormanlık alan.<br/>Ağaçlar ve yeşillik.</div>
+      </div>
+
+      <!-- Mountain -->
+      <div class="location-card" data-location="mountain">
+        <div class="location-preview mountain">⛰️</div>
+        <div class="location-name">Dağ</div>
+        <div class="location-desc">Yüksek dağ zirveleri.<br/>Gün batımı manzarası.</div>
+      </div>
+    </div>
+
+    <button class="btn" id="locationStartBtn">Oyuna Başla! ⚔️</button>
+  </div>
+
+  <!-- ===== LEADERBOARD SCREEN ===== -->
+  <div class="screen" id="leaderboardScreen">
+    <div class="screen-title">🏆 Liderlik Tablosu</div>
+    <div class="screen-subtitle" id="playerRankText">En iyi oyuncular</div>
+    
+    <div class="leaderboard-container">
+      <div class="leaderboard-header">
+        <span>#</span>
+        <span>Oyuncu</span>
+        <span>Karakter</span>
+        <span style="text-align:right">Skor</span>
+      </div>
+      <div id="leaderboardList">
+        <div class="leaderboard-empty">Yükleniyor...</div>
+      </div>
+    </div>
+
+    <div>
+      <button class="btn" id="playAgainBtn">Tekrar Oyna 🎮</button>
+      <button class="btn-secondary" id="backToMenuBtn">Ana Menü 🏠</button>
+    </div>
+  </div>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <div class="screen" id="gameScreen">
+    <div class="game-wrap">
+      <div class="hud">
+        <div class="pill" id="charPill">Ninja: -</div>
+        <div class="pill" id="scorePill">Skor: 0</div>
+      </div>
+
+      <canvas id="game" width="480" height="640"></canvas>
+
+      <div class="skill-bar">
+        <button class="skill-btn skill-x" id="btnSkillX">
+          <span class="skill-icon">⚔️</span> <span id="skillXName">Yetenek</span>
+          <div class="cd-bar" style="width: 100%;"></div>
+          <span class="cd-text" id="cdTextX"></span>
+        </button>
+        <button class="skill-btn skill-f" id="btnSkillF">
+          <span class="skill-icon">🌟</span> <span id="skillFName">Ultimate</span>
+          <div class="cd-bar" style="width: 100%;"></div>
+          <span class="cd-text" id="cdTextF"></span>
+        </button>
+      </div>
+
+      <div class="controls">
+        <button class="ctrlBtn" id="btnMenu">🏠 Menü</button>
+        <button class="ctrlBtn" id="btnJump">⬆️ Zıpla</button>
+        <button class="ctrlBtn" id="btnCrouch">⬇️ Eğil</button>
+      </div>
+
+      <div class="hint">
+        <b>Zıpla:</b> Space/↑/W • <b>Eğil:</b> ↓/S • <b>Yetenek:</b> X • <b>Ulti:</b> F
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== CONSTANTS =====
+  const WORLD_W = 480;
+  const WORLD_H = 640;
+
+  // ===== CHARACTER DEFINITIONS =====
+  const CHARACTERS = {
+    haru: {
+      name: 'Haru',
+      color: '#e0e0e0',
+      hairColor: '#fff',
+      gender: 'female',
+      weapon: 'spear',
+      skillX: {
+        name: 'Mızrak Uzat',
+        icon: '🗡️',
+        cooldown: 3,
+        action: 'spearExtend'
+      },
+      skillF: {
+        name: 'Ay Işığı',
+        icon: '🌙',
+        cooldown: 20,
+        duration: 4,
+        action: 'moonlight'
+      }
+    },
+    ringo: {
+      name: 'Ringo',
+      color: '#42a5f5',
+      hairColor: '#1e88e5',
+      gender: 'male',
+      weapon: 'shuriken',
+      skillX: {
+        name: 'Shuriken',
+        icon: '⭐',
+        cooldown: 3,
+        action: 'shuriken'
+      },
+      skillF: {
+        name: 'Kartal Uçuşu',
+        icon: '🦅',
+        cooldown: 20,
+        duration: 4,
+        action: 'eagleFlight'
+      }
+    },
+    usagi: {
+      name: 'Usagi',
+      color: '#ffeb3b',
+      hairColor: '#ffd54f',
+      gender: 'female',
+      weapon: 'water',
+      skillX: {
+        name: 'Su Topu',
+        icon: '💧',
+        cooldown: 3,
+        action: 'waterBall'
+      },
+      skillF: {
+        name: 'Buz Fırtınası',
+        icon: '🌨️',
+        cooldown: 20,
+        duration: 4,
+        action: 'iceStorm'
+      }
+    },
+    chisa: {
+      name: 'Chisa',
+      color: '#9b59b6',
+      hairColor: '#f1c40f',
+      skinColor: '#9b59b6',
+      gender: 'female',
+      weapon: 'katana',
+      isSmall: true,
+      skillX: {
+        name: 'Katana Darbesi',
+        icon: '⚔️',
+        cooldown: 1.5,
+        action: 'katanaSlash'
+      },
+      skillF: {
+        name: 'Kılıç Fırtınası',
+        icon: '🌀',
+        cooldown: 20,
+        duration: 4,
+        action: 'swordStorm'
+      }
+    },
+    butsuo: {
+      name: 'Butsuo',
+      color: '#ecf0f1',
+      hairColor: '#fff',
+      gender: 'male',
+      weapon: 'fist',
+      isBig: true,
+      skillX: {
+        name: 'Yumruk',
+        icon: '👊',
+        cooldown: 1.5,
+        action: 'punch'
+      },
+      skillF: {
+        name: 'Uçan Kafa',
+        icon: '💥',
+        cooldown: 20,
+        duration: 6,
+        action: 'headbutt'
+      }
+    },
+    teki: {
+      name: 'Teki',
+      color: '#27ae60',
+      hairColor: '#fff',
+      gender: 'male',
+      weapon: 'katana',
+      isThin: true,
+      skillX: {
+        name: 'Zehir Mermisi',
+        icon: '☠️',
+        cooldown: 4,
+        action: 'poisonShot'
+      },
+      skillF: {
+        name: 'Maymun Dostum',
+        icon: '🐵',
+        cooldown: 20,
+        duration: 5,
+        action: 'monkeyFriend'
+      }
+    },
+    susumu: {
+      name: 'Susumu',
+      color: '#e74c3c',
+      hairColor: '#222',
+      gender: 'male',
+      weapon: 'needle',
+      skillX: {
+        name: 'İğne Yağmuru',
+        icon: '💉',
+        cooldown: 3,
+        action: 'needleThrow'
+      },
+      skillF: {
+        name: 'Hayvan Dostları',
+        icon: '🐾',
+        cooldown: 20,
+        duration: 5,
+        action: 'animalFriends'
+      }
+    },
+    shinji: {
+      name: 'Shinji',
+      color: '#9b59b6',
+      hairColor: '#333',
+      gender: 'male',
+      weapon: 'illusion',
+      isTall: true,
+      skillX: {
+        name: 'Göz Işını',
+        icon: '👁️',
+        cooldown: 3,
+        action: 'eyeBeam'
+      },
+      skillF: {
+        name: 'İlüzyon Fırtınası',
+        icon: '🌀',
+        cooldown: 20,
+        duration: 4,
+        action: 'illusionStorm'
+      }
+    },
+    kazuya: {
+      name: 'Kazuya',
+      color: '#8e44ad',
+      hairColor: '#9b59b6',
+      gender: 'male',
+      weapon: 'wind',
+      skillX: {
+        name: 'Hava Dalgası',
+        icon: '💨',
+        cooldown: 3,
+        action: 'windWave'
+      },
+      skillF: {
+        name: 'Rüzgar Kılıcı',
+        icon: '🌪️',
+        cooldown: 20,
+        duration: 4,
+        action: 'windSword'
+      }
+    },
+    togami: {
+      name: 'Togami',
+      color: '#555',
+      hairColor: '#3498db',
+      gender: 'male',
+      weapon: 'feather',
+      skillX: {
+        name: 'Karga Tüyü',
+        icon: '🪶',
+        cooldown: 4,
+        action: 'crowFeather'
+      },
+      skillF: {
+        name: 'Karanlık Güç',
+        icon: '🦆',
+        cooldown: 20,
+        duration: 4,
+        action: 'darkAura'
+      }
+    },
+    kagi: {
+      name: 'Kagi',
+      color: '#ecf0f1',
+      hairColor: '#000',
+      gender: 'female',
+      weapon: 'paper',
+      hasLongHair: true,
+      skillX: {
+        name: 'Kağıt Fırlatma',
+        icon: '📄',
+        cooldown: 3,
+        action: 'paperThrow'
+      },
+      skillF: {
+        name: 'Kağıt Kanatlar',
+        icon: '🕊️',
+        cooldown: 20,
+        duration: 5,
+        action: 'paperWings'
+      }
+    },
+    akemi: {
+      name: 'Akemi',
+      color: '#ff69b4',
+      hairColor: '#f1c40f',
+      gender: 'female',
+      weapon: 'kiss',
+      hasLongHair: true,
+      skillX: {
+        name: 'Öpücük',
+        icon: '💋',
+        cooldown: 3,
+        action: 'kissThrow'
+      },
+      skillF: {
+        name: 'Alev Ejderi',
+        icon: '🐲',
+        cooldown: 20,
+        duration: 4,
+        action: 'fireDragon'
+      }
+    },
+    ryoken: {
+      name: 'Ryoken',
+      color: '#9b59b6',
+      hairColor: '#f1c40f',
+      gender: 'male',
+      weapon: 'illusion',
+      skillX: {
+        name: 'İlüzyon',
+        icon: '👁️',
+        cooldown: 3,
+        action: 'illusionKill'
+      },
+      skillF: {
+        name: 'Mistik Şimşek',
+        icon: '⚡',
+        cooldown: 20,
+        duration: 4,
+        action: 'mysticLightning'
+      }
+    },
+    riku: {
+      name: 'Riku',
+      color: '#3498db',
+      hairColor: '#fff',
+      gender: 'male',
+      weapon: 'bow',
+      isSmall: true,
+      skillX: {
+        name: 'Ok Atışı',
+        icon: '🏹',
+        cooldown: 2.5,
+        action: 'arrowShot'
+      },
+      skillF: {
+        name: 'Ok Yağmuru',
+        icon: '🎯',
+        cooldown: 20,
+        duration: 4,
+        action: 'arrowRain'
+      }
+    },
+    joaryu: {
+      name: 'Joaryu',
+      color: '#8e44ad',
+      hairColor: '#9b59b6',
+      gender: 'male',
+      weapon: 'kunai',
+      isTall: true,
+      skillX: {
+        name: 'Kunai',
+        icon: '🗡️',
+        cooldown: 2,
+        action: 'kunaiThrow'
+      },
+      skillF: {
+        name: 'Gölge Klon',
+        icon: '👥',
+        cooldown: 20,
+        duration: 4,
+        action: 'shadowClone'
+      }
+    }
+  };
+
+  // ===== LOCATIONS =====
+  const LOCATIONS = {
+    dark: {
+      name: 'Karanlık Gece',
+      bgGradient: ['#0b0d12', '#12162a', '#1a1a2e'],
+      groundColor: 'rgba(255,255,255,0.2)',
+      dashColor: 'rgba(255,255,255,0.08)',
+      cloudColor: '#fff',
+      cloudAlpha: 0.12,
+      skyObjects: 'moon',
+      canvasBg: 'radial-gradient(900px 700px at 50% 0%, #12162a 0%, #0b0d12 60%, #070910 100%)'
+    },
+    forest: {
+      name: 'Orman',
+      bgGradient: ['#87ceeb', '#98d8c8', '#2d5016'],
+      groundColor: 'rgba(34,139,34,0.8)',
+      dashColor: 'rgba(139,69,19,0.4)',
+      cloudColor: '#fff',
+      cloudAlpha: 0.5,
+      skyObjects: 'sun',
+      trees: true,
+      canvasBg: 'linear-gradient(180deg, #87ceeb 0%, #98d8c8 40%, #2d5016 100%)'
+    },
+    mountain: {
+      name: 'Dağ',
+      bgGradient: ['#f9a825', '#ffcc80', '#5d4037'],
+      groundColor: 'rgba(93,64,55,0.8)',
+      dashColor: 'rgba(121,85,72,0.5)',
+      cloudColor: '#ffecb3',
+      cloudAlpha: 0.4,
+      skyObjects: 'sunset',
+      mountains: true,
+      canvasBg: 'linear-gradient(180deg, #f9a825 0%, #ffcc80 40%, #8d6e63 70%, #5d4037 100%)'
+    }
+  };
+
+  // ===== DOM ELEMENTS =====
+  const screens = {
+    nickname: document.getElementById('nicknameScreen'),
+    charSelect: document.getElementById('charSelectScreen'),
+    locationSelect: document.getElementById('locationSelectScreen'),
+    leaderboard: document.getElementById('leaderboardScreen'),
+    game: document.getElementById('gameScreen')
+  };
+
+  const nickInput = document.getElementById('nickInput');
+  const nickBtn = document.getElementById('nickBtn');
+  const welcomeText = document.getElementById('welcomeText');
+  const startBtn = document.getElementById('startBtn');
+  const charCards = document.querySelectorAll('.char-card');
+  const locationCards = document.querySelectorAll('.location-card');
+  const locationStartBtn = document.getElementById('locationStartBtn');
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const charPill = document.getElementById('charPill');
+  const scorePill = document.getElementById('scorePill');
+
+  const btnSkillX = document.getElementById('btnSkillX');
+  const btnSkillF = document.getElementById('btnSkillF');
+  const skillXName = document.getElementById('skillXName');
+  const skillFName = document.getElementById('skillFName');
+  const cdTextX = document.getElementById('cdTextX');
+  const cdTextF = document.getElementById('cdTextF');
+
+  const btnMenu = document.getElementById('btnMenu');
+  const btnJump = document.getElementById('btnJump');
+  const btnCrouch = document.getElementById('btnCrouch');
+
+  const leaderboardList = document.getElementById('leaderboardList');
+  const playerRankText = document.getElementById('playerRankText');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const backToMenuBtn = document.getElementById('backToMenuBtn');
+
+  // API URL - change this if you deploy to a server
+  const API_URL = 'http://localhost:3000';
+
+  // ===== STATE =====
+  let nickname = '';
+  let selectedChar = null;
+  let selectedLocation = 'dark';
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  // ===== GAME STATE =====
+  const G = {
+    t: 0, dt: 0, last: 0,
+    running: false, gameOver: false,
+
+    score: 0,
+    speed: 280,
+    speedMax: 600,
+    speedAccel: 12,
+    gravity: 2400,
+
+    groundY: 520,
+    groundScroll: 0,
+
+    spawnTimer: 0,
+    spawnMin: 0.70,
+    spawnMax: 1.20,
+
+    obstacles: [],
+    projectiles: [],
+    particles: [],
+    clouds: [],
+
+    skillXCooldown: 0,
+    skillFCooldown: 0,
+    ultActive: false,
+    ultTimer: 0,
+    ultType: null,
+
+    // Eagle flight state
+    eagleY: 0,
+    eagleTargetY: 0,
+    eagleWingPhase: 0,
+
+    // Monkey friend state
+    monkeyRect: null,
+
+    scaleX: 1,
+    scaleY: 1
+  };
+
+  // ===== PLAYER =====
+  const P = {
+    x: 100,
+    y: 520,
+    w: 40,
+    h: 64,
+    vy: 0,
+    onGround: true,
+    crouching: false,
+    baseH: 64,
+    crouchH: 36,
+    jumpVel: -920
+  };
+
+  // ===== SCREEN NAVIGATION =====
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ===== NICKNAME SCREEN =====
+  nickInput.addEventListener('input', () => {
+    const val = nickInput.value.trim();
+    nickBtn.disabled = val.length < 1;
+  });
+
+  nickBtn.addEventListener('click', () => {
+    nickname = nickInput.value.trim().slice(0, 16);
+    if (nickname.length < 1) return;
+    sessionStorage.setItem('ninja_nick', nickname);
+    welcomeText.textContent = `Hoş geldin, ${nickname}!`;
+    welcomeText.textContent = `Dene ve Gör - bilge birisi.`;
+    showScreen('charSelect');
+  });
+
+  // ===== CHARACTER SELECT =====
+  charCards.forEach(card => {
+    card.addEventListener('click', () => {
+      charCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedChar = card.dataset.char;
+      startBtn.disabled = false;
+    });
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (!selectedChar) return;
+    showScreen('locationSelect');
+  });
+
+  // ===== LOCATION SELECT =====
+  locationCards.forEach(card => {
+    card.addEventListener('click', () => {
+      locationCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedLocation = card.dataset.location;
+    });
+  });
+
+  locationStartBtn.addEventListener('click', () => {
+    showScreen('game');
+    initGame();
+  });
+
+  // ===== LEADERBOARD =====
+  playAgainBtn.addEventListener('click', () => {
+    showScreen('game');
+    resetGame();
+  });
+
+  backToMenuBtn.addEventListener('click', () => {
+    showScreen('charSelect');
+  });
+
+  async function submitScore(score) {
+    try {
+      const response = await fetch(`${API_URL}/api/scores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: nickname,
+          score: score,
+          character: selectedChar,
+          location: selectedLocation
+        })
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+      return null;
+    }
+  }
+
+  async function fetchLeaderboard() {
+    try {
+      const response = await fetch(`${API_URL}/api/scores`);
+      const scores = await response.json();
+      return scores;
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+      return null;
+    }
+  }
+
+  async function showLeaderboard(finalScore) {
+    showScreen('leaderboard');
+    leaderboardList.innerHTML = '<div class="leaderboard-empty">Yükleniyor...</div>';
+    
+    // Submit score first
+    const submitResult = await submitScore(finalScore);
+    
+    // Fetch leaderboard
+    const scores = await fetchLeaderboard();
+    
+    if (!scores || scores.length === 0) {
+      leaderboardList.innerHTML = '<div class="leaderboard-empty">Henüz skor yok. İlk sen ol!</div>';
+      playerRankText.textContent = 'Skorun kaydedildi!';
+      return;
+    }
+    
+    // Find player's rank
+    const playerIndex = scores.findIndex(s => s.nickname.toLowerCase() === nickname.toLowerCase());
+    if (playerIndex !== -1) {
+      const rank = playerIndex + 1;
+      const suffix = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+      playerRankText.textContent = `Sıralaman: #${rank} ${suffix}`;
+      if (submitResult && submitResult.isNewHighScore) {
+        playerRankText.textContent += ' - Yeni Rekor! 🎉';
+      }
+    } else {
+      playerRankText.textContent = `Skorun: ${Math.floor(finalScore)}`;
+    }
+    
+    // Render leaderboard
+    leaderboardList.innerHTML = scores.map((s, i) => {
+      const rank = i + 1;
+      const isCurrentPlayer = s.nickname.toLowerCase() === nickname.toLowerCase();
+      const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
+      const charName = CHARACTERS[s.character]?.name || s.character;
+      
+      return `
+        <div class="leaderboard-row ${rankClass} ${isCurrentPlayer ? 'current-player' : ''}">
+          <span class="rank ${rankClass}">${rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank}</span>
+          <span class="player-name">${escapeHtml(s.nickname)}</span>
+          <span class="player-char">${charName}</span>
+          <span class="player-score">${s.score.toLocaleString()}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ===== RESPONSIVE CANVAS =====
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(320, Math.floor(rect.width));
+    const cssH = Math.floor(cssW * (WORLD_H / WORLD_W));
+    canvas.style.height = cssH + 'px';
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    G.scaleX = cssW / WORLD_W;
+    G.scaleY = cssH / WORLD_H;
+  }
+
+  // ===== INIT GAME =====
+  function initGame() {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const char = CHARACTERS[selectedChar];
+    const loc = LOCATIONS[selectedLocation];
+    
+    charPill.textContent = `${char.name} | ${nickname}`;
+    skillXName.textContent = char.skillX.name;
+    skillFName.textContent = char.skillF.name;
+    btnSkillX.querySelector('.skill-icon').textContent = char.skillX.icon;
+    btnSkillF.querySelector('.skill-icon').textContent = char.skillF.icon;
+    
+    // Apply location background to canvas
+    canvas.style.background = loc.canvasBg;
+
+    resetGame();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function resetGame() {
+    G.running = true;
+    G.gameOver = false;
+    G.score = 0;
+    G.speed = 280;
+    G.spawnTimer = rand(G.spawnMin, G.spawnMax);
+    G.obstacles = [];
+    G.projectiles = [];
+    G.particles = [];
+    G.groundScroll = 0;
+
+    G.skillXCooldown = 0;
+    G.skillFCooldown = 0;
+    G.ultActive = false;
+    G.ultTimer = 0;
+    G.ultType = null;
+    G.eagleY = 0;
+    G.eagleTargetY = G.groundY - 200;
+    G.eagleWingPhase = 0;
+    G.headbuttY = G.groundY - 25;
+    G.swordStormTimer = 0;
+
+    // Adjust player size based on character
+    const char = CHARACTERS[selectedChar];
+    if (char.isSmall) {
+      P.baseH = 44;
+      P.crouchH = 26;
+      P.w = 32;
+    } else if (char.isBig) {
+      P.baseH = 80;
+      P.crouchH = 48;
+      P.w = 50;
+    } else if (char.isThin) {
+      P.baseH = 64;
+      P.crouchH = 36;
+      P.w = 34; // Thinner body for Teki
+    } else {
+      P.baseH = 64;
+      P.crouchH = 36;
+      P.w = 40;
+    }
+    P.h = P.baseH;
+
+    P.y = G.groundY;
+    P.vy = 0;
+    P.onGround = true;
+    P.crouching = false;
+
+    G.clouds = Array.from({length: 5}, () => ({
+      x: rand(0, WORLD_W),
+      y: rand(40, 150),
+      s: rand(0.5, 1.0),
+      v: rand(15, 30)
+    }));
+
+    updateSkillUI();
+  }
+
+  // ===== OBSTACLES =====
+  function spawnObstacle() {
+    const roll = Math.random();
+    if (roll < 0.65) {
+      // Ground enemy (ninja)
+      const w = rand(30, 45);
+      const h = rand(50, 70);
+      G.obstacles.push({ 
+        type: 'enemy', 
+        x: WORLD_W + 40, 
+        y: G.groundY, 
+        w, h, 
+        hitPad: 6,
+        color: `hsl(${rand(0, 360)}, 50%, 40%)`
+      });
+    } else {
+      // Flying enemy (bird/kunai)
+      const y = G.groundY - (Math.random() < 0.5 ? 80 : 140);
+      G.obstacles.push({ 
+        type: 'flying', 
+        x: WORLD_W + 40, 
+        y, 
+        w: 50, h: 28, 
+        hitPad: 8,
+        phase: 0 
+      });
+    }
+  }
+
+  function obstacleRect(o) { return { x: o.x, y: o.y - o.h, w: o.w, h: o.h }; }
+  function playerRect() { return { x: P.x, y: P.y - P.h, w: P.w, h: P.h }; }
+  function rectsOverlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  // ===== SKILLS =====
+  function useSkillX() {
+    if (!G.running || G.gameOver) return;
+    if (G.skillXCooldown > 0) return;
+
+    const char = CHARACTERS[selectedChar];
+    const pr = playerRect();
+
+    if (char.skillX.action === 'spearExtend') {
+      // Haru: Mızrak uzatma
+      G.projectiles.push({
+        type: 'spear',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4,
+        w: 120,
+        h: 8,
+        vx: 0,
+        extending: true,
+        maxW: 180,
+        life: 0.5
+      });
+    } else if (char.skillX.action === 'shuriken') {
+      // Ringo: Shuriken
+      G.projectiles.push({
+        type: 'shuriken',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4,
+        radius: 12,
+        vx: 700,
+        spin: 0,
+        life: 3
+      });
+    } else if (char.skillX.action === 'waterBall') {
+      // Usagi: Su topu
+      G.projectiles.push({
+        type: 'waterBall',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4,
+        radius: 16,
+        vx: 600,
+        life: 3,
+        trail: []
+      });
+    } else if (char.skillX.action === 'katanaSlash') {
+      // Chisa: Katana darbesi - kısa menzil ama hızlı
+      G.projectiles.push({
+        type: 'katanaSlash',
+        x: pr.x + pr.w - 10,
+        y: pr.y + pr.h * 0.3,
+        w: 60,
+        h: 50,
+        vx: 0,
+        life: 0.25,
+        slashPhase: 0
+      });
+    } else if (char.skillX.action === 'punch') {
+      // Butsuo: Yumruk - kısa menzil ama güçlü
+      G.projectiles.push({
+        type: 'punch',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4,
+        w: 50,
+        h: 40,
+        vx: 0,
+        life: 0.3,
+        punchPhase: 0
+      });
+    } else if (char.skillX.action === 'poisonShot') {
+      // Teki: Zehir mermisi - uzun menzil, tek vuruş
+      G.projectiles.push({
+        type: 'poisonShot',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.35,
+        w: 18,
+        h: 18,
+        vx: 400,
+        spin: 0
+      });
+    } else if (char.skillX.action === 'needleThrow') {
+      // Susumu: 5 parlayan iğne fırlatır
+      for (let i = 0; i < 5; i++) {
+        G.projectiles.push({
+          type: 'needle',
+          x: pr.x + pr.w,
+          y: pr.y + pr.h * 0.3 + i * 12,
+          w: 30,
+          h: 3,
+          vx: 650 + i * 30,
+          vy: (i - 2) * 20,
+          life: 2,
+          glow: Math.random() * Math.PI * 2
+        });
+      }
+    } else if (char.skillX.action === 'eyeBeam') {
+      // Shinji: Gözünden çıkan ışın
+      G.projectiles.push({
+        type: 'eyeBeam',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.25,
+        w: 200,
+        h: 6,
+        vx: 800,
+        life: 0.8,
+        glow: 0
+      });
+    } else if (char.skillX.action === 'windWave') {
+      // Kazuya: Hava dalgası üfler
+      G.projectiles.push({
+        type: 'windWave',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4,
+        w: 40,
+        h: 30,
+        vx: 500,
+        life: 2,
+        phase: 0
+      });
+    } else if (char.skillX.action === 'crowFeather') {
+      // Togami: 3 karga tüyü fırlatır
+      for (let i = 0; i < 3; i++) {
+        G.projectiles.push({
+          type: 'crowFeather',
+          x: pr.x + pr.w,
+          y: pr.y + pr.h * 0.3 + i * 18,
+          w: 35,
+          h: 8,
+          vx: 550 + i * 40,
+          vy: (i - 1) * 30,
+          life: 2.5,
+          spin: Math.random() * Math.PI * 2
+        });
+      }
+    } else if (char.skillX.action === 'paperThrow') {
+      // Kagi: 4 keskin kağıt fırlatır
+      for (let i = 0; i < 4; i++) {
+        G.projectiles.push({
+          type: 'paperThrow',
+          x: pr.x + pr.w,
+          y: pr.y + pr.h * 0.25 + i * 15,
+          w: 30,
+          h: 20,
+          vx: 600 + i * 30,
+          vy: (i - 1.5) * 40,
+          life: 2,
+          spin: 0
+        });
+      }
+    } else if (char.skillX.action === 'kissThrow') {
+      // Akemi: 3 öpücük fırlatır
+      for (let i = 0; i < 3; i++) {
+        G.projectiles.push({
+          type: 'kissThrow',
+          x: pr.x + pr.w,
+          y: pr.y + pr.h * 0.3,
+          w: 25,
+          h: 25,
+          vx: 350 + i * 50,
+          vy: Math.sin(i * 0.8) * 60 - 30,
+          life: 2.5,
+          phase: i * Math.PI / 3,
+          wobble: 0
+        });
+      }
+    } else if (char.skillX.action === 'illusionKill') {
+      // Ryoken: İlüzyon - tek düşmanı öldürür
+      G.projectiles.push({
+        type: 'illusionKill',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.3,
+        w: 40,
+        h: 40,
+        vx: 500,
+        life: 2,
+        phase: 0
+      });
+    } else if (char.skillX.action === 'arrowShot') {
+      // Riku: Ok atar
+      G.projectiles.push({
+        type: 'arrowShot',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.35,
+        w: 45,
+        h: 6,
+        vx: 700,
+        life: 2.5
+      });
+    } else if (char.skillX.action === 'kunaiThrow') {
+      // Joaryu: Kunai fırlatır
+      G.projectiles.push({
+        type: 'kunaiThrow',
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.35,
+        w: 35,
+        h: 10,
+        vx: 650,
+        life: 2,
+        spin: 0
+      });
+    }
+
+    // Particles
+    for (let i = 0; i < 8; i++) {
+      G.particles.push({
+        x: pr.x + pr.w,
+        y: pr.y + pr.h * 0.4 + rand(-10, 10),
+        vx: rand(50, 150),
+        vy: rand(-40, 40),
+        life: rand(0.2, 0.4),
+        color: char.color
+      });
+    }
+
+    G.skillXCooldown = char.skillX.cooldown;
+    updateSkillUI();
+  }
+
+  function useSkillF() {
+    if (!G.running || G.gameOver) return;
+    if (G.skillFCooldown > 0) return;
+    if (G.ultActive) return;
+
+    const char = CHARACTERS[selectedChar];
+    G.ultActive = true;
+    G.ultTimer = char.skillF.duration;
+    G.ultType = char.skillF.action;
+
+    // Eagle flight: start rising
+    if (char.skillF.action === 'eagleFlight') {
+      G.eagleY = P.y;
+      G.eagleTargetY = G.groundY - 220;
+      P.onGround = false;
+    }
+
+    // Paper wings: start flying
+    if (char.skillF.action === 'paperWings') {
+      G.paperWingsY = G.groundY - 180;
+      P.onGround = false;
+    }
+
+    // Headbutt: start flying forward at ground level
+    if (char.skillF.action === 'headbutt') {
+      P.onGround = false;
+      G.headbuttY = G.groundY - 25;
+    }
+
+    // Sword storm: rapid slashes
+    if (char.skillF.action === 'swordStorm') {
+      G.swordStormTimer = 0;
+    }
+
+    // Arrow rain: continuous arrow spawning
+    if (char.skillF.action === 'arrowRain') {
+      G.arrowRainTimer = 0;
+    }
+
+    // Visual feedback
+    canvas.classList.add('ult-active');
+
+    // Particles burst
+    for (let i = 0; i < 20; i++) {
+      G.particles.push({
+        x: P.x + P.w / 2 + rand(-30, 30),
+        y: P.y - P.h / 2 + rand(-30, 30),
+        vx: rand(-200, 200),
+        vy: rand(-200, 50),
+        life: rand(0.5, 1.0),
+        color: char.skillF.action === 'moonlight' ? '#fff' : 
+               char.skillF.action === 'eagleFlight' ? '#8b5cf6' : 
+               char.skillF.action === 'swordStorm' ? '#e74c3c' :
+               char.skillF.action === 'headbutt' ? '#ecf0f1' :
+               char.skillF.action === 'poisonArmor' ? '#27ae60' :
+               char.skillF.action === 'monkeyFriend' ? '#8B4513' :
+               char.skillF.action === 'animalFriends' ? '#ff9f43' :
+               char.skillF.action === 'paperWings' ? '#ecf0f1' :
+               char.skillF.action === 'illusionStorm' ? '#9b59b6' :
+               char.skillF.action === 'windSword' ? '#3498db' :
+               char.skillF.action === 'darkAura' ? '#222' :
+               char.skillF.action === 'fireDragon' ? '#e74c3c' :
+               char.skillF.action === 'mysticLightning' ? '#f1c40f' :
+               char.skillF.action === 'arrowRain' ? '#3498db' :
+               char.skillF.action === 'shadowClone' ? '#8e44ad' : '#67e8f9'
+      });
+    }
+
+    G.skillFCooldown = char.skillF.cooldown;
+    updateSkillUI();
+  }
+
+  function updateSkillUI() {
+    const char = CHARACTERS[selectedChar];
+    
+    // Skill X
+    const xPct = Math.max(0, 1 - G.skillXCooldown / char.skillX.cooldown) * 100;
+    btnSkillX.querySelector('.cd-bar').style.width = xPct + '%';
+    btnSkillX.classList.toggle('cooldown', G.skillXCooldown > 0);
+    cdTextX.textContent = G.skillXCooldown > 0 ? Math.ceil(G.skillXCooldown) + 's' : '';
+
+    // Skill F
+    const fPct = Math.max(0, 1 - G.skillFCooldown / char.skillF.cooldown) * 100;
+    btnSkillF.querySelector('.cd-bar').style.width = fPct + '%';
+    btnSkillF.classList.toggle('cooldown', G.skillFCooldown > 0);
+    cdTextF.textContent = G.skillFCooldown > 0 ? Math.ceil(G.skillFCooldown) + 's' : '';
+  }
+
+  // ===== ACTIONS =====
+  function jump() {
+    if (G.gameOver) { resetGame(); return; }
+    if (!G.running) return;
+
+    // Eagle flight: control height with jump
+    if (G.ultActive && G.ultType === 'eagleFlight') {
+      // Move up a bit when pressing jump during eagle flight
+      G.eagleTargetY = Math.max(100, G.eagleTargetY - 40);
+      return;
+    }
+    
+    // Paper wings: control height with jump
+    if (G.ultActive && G.ultType === 'paperWings') {
+      G.paperWingsY = Math.max(100, G.paperWingsY - 40);
+      return;
+    }
+
+    if (P.onGround) {
+      P.vy = P.jumpVel;
+      P.onGround = false;
+      
+      for (let i = 0; i < 8; i++) {
+        G.particles.push({
+          x: P.x + rand(5, P.w - 5),
+          y: G.groundY - rand(2, 8),
+          vx: rand(-60, -20),
+          vy: rand(-80, -30),
+          life: rand(0.2, 0.35),
+          color: '#888'
+        });
+      }
+    }
+  }
+
+  function crouch(on) {
+    if (G.gameOver) return;
+    
+    // Eagle flight: control height with crouch
+    if (G.ultActive && G.ultType === 'eagleFlight') {
+      if (on) {
+        G.eagleTargetY = Math.min(G.groundY - 80, G.eagleTargetY + 60);
+      }
+      return;
+    }
+    
+    // Paper wings: control height with crouch
+    if (G.ultActive && G.ultType === 'paperWings') {
+      if (on) {
+        G.paperWingsY = Math.min(G.groundY - 80, G.paperWingsY + 60);
+      }
+      return;
+    }
+    
+    P.crouching = on;
+    P.h = on ? P.crouchH : P.baseH;
+    if (P.onGround) P.y = G.groundY;
+  }
+
+  // ===== INPUT =====
+  function onPointerTap(el, fn) {
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      el.setPointerCapture?.(e.pointerId);
+      fn(e);
+    });
+  }
+
+  onPointerTap(btnJump, () => jump());
+  onPointerTap(btnSkillX, () => useSkillX());
+  onPointerTap(btnSkillF, () => useSkillF());
+
+  btnCrouch.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    btnCrouch.setPointerCapture?.(e.pointerId);
+    crouch(true);
+  });
+  btnCrouch.addEventListener('pointerup', () => crouch(false));
+  btnCrouch.addEventListener('pointercancel', () => crouch(false));
+  btnCrouch.addEventListener('pointerleave', () => crouch(false));
+
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    jump();
+  });
+
+  btnMenu.addEventListener('click', () => {
+    G.running = false;
+    canvas.classList.remove('ult-active');
+    showScreen('charSelect');
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (screens.game.classList.contains('active')) {
+      const k = e.key.toLowerCase();
+      if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); jump(); }
+      if (k === 'arrowdown' || k === 's') { e.preventDefault(); crouch(true); }
+      if (k === 'x') { e.preventDefault(); useSkillX(); }
+      if (k === 'f') { e.preventDefault(); useSkillF(); }
+      if (k === 'r') { e.preventDefault(); resetGame(); }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'arrowdown' || k === 's') crouch(false);
+  });
+
+  // ===== DRAWING =====
+  function drawClouds(dt) {
+    const loc = LOCATIONS[selectedLocation];
+    ctx.save();
+    
+    // Draw sky objects based on location
+    if (loc.skyObjects === 'moon') {
+      // Moon
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = '#f5f5dc';
+      ctx.beginPath();
+      ctx.arc(400, 80, 35, 0, Math.PI * 2);
+      ctx.fill();
+      // Moon craters
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#aaa';
+      ctx.beginPath();
+      ctx.arc(390, 70, 8, 0, Math.PI * 2);
+      ctx.arc(410, 85, 5, 0, Math.PI * 2);
+      ctx.arc(395, 90, 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (loc.skyObjects === 'sun') {
+      // Sun
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#fff176';
+      ctx.shadowColor = '#ffeb3b';
+      ctx.shadowBlur = 40;
+      ctx.beginPath();
+      ctx.arc(380, 70, 40, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (loc.skyObjects === 'sunset') {
+      // Sunset sun
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#ff5722';
+      ctx.shadowColor = '#ff9800';
+      ctx.shadowBlur = 60;
+      ctx.beginPath();
+      ctx.arc(400, 120, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    
+    // Draw mountains for mountain location
+    if (loc.mountains) {
+      ctx.globalAlpha = 0.6;
+      // Far mountains
+      ctx.fillStyle = '#8d6e63';
+      ctx.beginPath();
+      ctx.moveTo(0, 400);
+      ctx.lineTo(80, 280);
+      ctx.lineTo(160, 380);
+      ctx.lineTo(240, 250);
+      ctx.lineTo(320, 350);
+      ctx.lineTo(400, 200);
+      ctx.lineTo(480, 320);
+      ctx.lineTo(480, 400);
+      ctx.closePath();
+      ctx.fill();
+      // Near mountains
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = '#5d4037';
+      ctx.beginPath();
+      ctx.moveTo(0, 450);
+      ctx.lineTo(100, 350);
+      ctx.lineTo(180, 420);
+      ctx.lineTo(280, 320);
+      ctx.lineTo(380, 400);
+      ctx.lineTo(480, 300);
+      ctx.lineTo(480, 450);
+      ctx.closePath();
+      ctx.fill();
+      // Snow caps
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(240, 250);
+      ctx.lineTo(230, 280);
+      ctx.lineTo(250, 280);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(400, 200);
+      ctx.lineTo(385, 240);
+      ctx.lineTo(415, 240);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    // Draw trees for forest location
+    if (loc.trees) {
+      // Background trees (static, far)
+      ctx.globalAlpha = 0.4;
+      for (let i = 0; i < 8; i++) {
+        const tx = i * 65 + 20;
+        const ty = 380;
+        const treeH = 80 + (i % 3) * 20;
+        // Tree trunk
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(tx - 4, ty - treeH * 0.3, 8, treeH * 0.4);
+        // Tree foliage
+        ctx.fillStyle = '#1b5e20';
+        ctx.beginPath();
+        ctx.moveTo(tx, ty - treeH);
+        ctx.lineTo(tx - 25, ty - treeH * 0.3);
+        ctx.lineTo(tx + 25, ty - treeH * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(tx, ty - treeH * 0.7);
+        ctx.lineTo(tx - 30, ty - treeH * 0.15);
+        ctx.lineTo(tx + 30, ty - treeH * 0.15);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      // Foreground bushes
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#2e7d32';
+      for (let i = 0; i < 6; i++) {
+        const bx = i * 90 + 30;
+        ctx.beginPath();
+        ctx.arc(bx, 490, 25, Math.PI, 0);
+        ctx.arc(bx + 20, 490, 20, Math.PI, 0);
+        ctx.fill();
+      }
+    }
+    
+    // Draw clouds
+    for (const c of G.clouds) {
+      c.x -= c.v * dt;
+      if (c.x < -100) { c.x = WORLD_W + 100; c.y = rand(40, 150); }
+      ctx.globalAlpha = loc.cloudAlpha;
+      ctx.fillStyle = loc.cloudColor;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, 24 * c.s, 12 * c.s, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x + 16 * c.s, c.y + 3 * c.s, 20 * c.s, 10 * c.s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawGround() {
+    const loc = LOCATIONS[selectedLocation];
+    ctx.save();
+    
+    // Ground fill for forest/mountain
+    if (loc.trees || loc.mountains) {
+      ctx.fillStyle = loc.trees ? '#1a3d0c' : '#3e2723';
+      ctx.fillRect(0, G.groundY, WORLD_W, WORLD_H - G.groundY);
+    }
+    
+    // Main line
+    ctx.strokeStyle = loc.groundColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, G.groundY);
+    ctx.lineTo(WORLD_W, G.groundY);
+    ctx.stroke();
+
+    // Dashes
+    const dashW = 20, gap = 14, total = dashW + gap;
+    let x = -(G.groundScroll % total);
+    ctx.strokeStyle = loc.dashColor;
+    ctx.lineWidth = 5;
+    while (x < WORLD_W) {
+      ctx.beginPath();
+      ctx.moveTo(x, G.groundY + 12);
+      ctx.lineTo(x + dashW, G.groundY + 12);
+      ctx.stroke();
+      x += total;
+    }
+    ctx.restore();
+  }
+
+  function drawPlayer() {
+    const pr = playerRect();
+    const char = CHARACTERS[selectedChar];
+
+    ctx.save();
+
+    // Shadow
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    const shadowScale = P.onGround ? 1 : 0.6;
+    ctx.ellipse(pr.x + pr.w / 2, G.groundY + 8, 18 * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ultimate effects
+    if (G.ultActive) {
+      ctx.globalAlpha = 0.4 + Math.sin(G.t * 10) * 0.2;
+      if (G.ultType === 'moonlight') {
+        // Haru: Glowing aura
+        const grad = ctx.createRadialGradient(pr.x + pr.w/2, pr.y + pr.h/2, 0, pr.x + pr.w/2, pr.y + pr.h/2, 60);
+        grad.addColorStop(0, 'rgba(255,255,255,0.8)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 30, pr.y - 30, pr.w + 60, pr.h + 60);
+      } else if (G.ultType === 'eagleFlight') {
+        // Ringo: Draw full eagle carrying the ninja
+        const eagleCenterX = pr.x + pr.w / 2;
+        const eagleCenterY = pr.y + pr.h / 2 - 10;
+        const wingFlap = Math.sin(G.eagleWingPhase) * 25;
+        
+        // Eagle glow
+        ctx.globalAlpha = 0.3;
+        const eagleGlow = ctx.createRadialGradient(eagleCenterX, eagleCenterY - 20, 0, eagleCenterX, eagleCenterY - 20, 80);
+        eagleGlow.addColorStop(0, 'rgba(139, 92, 246, 0.6)');
+        eagleGlow.addColorStop(1, 'rgba(139, 92, 246, 0)');
+        ctx.fillStyle = eagleGlow;
+        ctx.fillRect(eagleCenterX - 100, eagleCenterY - 80, 200, 120);
+        
+        ctx.globalAlpha = 1;
+        
+        // Left wing
+        ctx.fillStyle = '#5b4a3f';
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(eagleCenterX - 10, eagleCenterY - 15);
+        ctx.quadraticCurveTo(eagleCenterX - 50, eagleCenterY - 50 - wingFlap, eagleCenterX - 90, eagleCenterY - 30 - wingFlap * 0.5);
+        ctx.quadraticCurveTo(eagleCenterX - 70, eagleCenterY - 20, eagleCenterX - 40, eagleCenterY - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Right wing
+        ctx.beginPath();
+        ctx.moveTo(eagleCenterX + 10, eagleCenterY - 15);
+        ctx.quadraticCurveTo(eagleCenterX + 50, eagleCenterY - 50 - wingFlap, eagleCenterX + 90, eagleCenterY - 30 - wingFlap * 0.5);
+        ctx.quadraticCurveTo(eagleCenterX + 70, eagleCenterY - 20, eagleCenterX + 40, eagleCenterY - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Eagle body
+        ctx.fillStyle = '#6b5344';
+        ctx.beginPath();
+        ctx.ellipse(eagleCenterX, eagleCenterY - 20, 22, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Eagle head
+        ctx.fillStyle = '#f5f5dc';
+        ctx.beginPath();
+        ctx.arc(eagleCenterX + 25, eagleCenterY - 28, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Beak
+        ctx.fillStyle = '#ffa500';
+        ctx.beginPath();
+        ctx.moveTo(eagleCenterX + 35, eagleCenterY - 28);
+        ctx.lineTo(eagleCenterX + 48, eagleCenterY - 26);
+        ctx.lineTo(eagleCenterX + 35, eagleCenterY - 24);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Eagle eye
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(eagleCenterX + 30, eagleCenterY - 30, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Tail feathers
+        ctx.fillStyle = '#5b4a3f';
+        ctx.beginPath();
+        ctx.moveTo(eagleCenterX - 20, eagleCenterY - 15);
+        ctx.lineTo(eagleCenterX - 45, eagleCenterY - 5);
+        ctx.lineTo(eagleCenterX - 40, eagleCenterY - 12);
+        ctx.lineTo(eagleCenterX - 50, eagleCenterY - 8);
+        ctx.lineTo(eagleCenterX - 25, eagleCenterY - 18);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Talons holding ninja
+        ctx.strokeStyle = '#ffa500';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(eagleCenterX - 8, eagleCenterY - 5);
+        ctx.lineTo(eagleCenterX - 8, eagleCenterY + 15);
+        ctx.moveTo(eagleCenterX + 8, eagleCenterY - 5);
+        ctx.lineTo(eagleCenterX + 8, eagleCenterY + 15);
+        ctx.stroke();
+      } else if (G.ultType === 'iceStorm') {
+        // Usagi: Ice storm swirling around
+        ctx.globalAlpha = 0.6;
+        
+        // Swirling ice vortex
+        for (let i = 0; i < 12; i++) {
+          const angle = G.t * 4 + i * Math.PI / 6;
+          const dist = 40 + Math.sin(G.t * 8 + i) * 10;
+          const iceX = pr.x + pr.w/2 + Math.cos(angle) * dist;
+          const iceY = pr.y + pr.h/2 + Math.sin(angle) * dist * 0.6;
+          
+          // Ice shards
+          ctx.save();
+          ctx.translate(iceX, iceY);
+          ctx.rotate(angle + G.t * 3);
+          
+          ctx.fillStyle = '#67e8f9';
+          ctx.beginPath();
+          ctx.moveTo(0, -8);
+          ctx.lineTo(4, 0);
+          ctx.lineTo(0, 8);
+          ctx.lineTo(-4, 0);
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.restore();
+        }
+        
+        // Snowflakes
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < 8; i++) {
+          const angle = -G.t * 3 + i * Math.PI / 4;
+          const dist = 55 + Math.sin(G.t * 6 + i * 2) * 8;
+          const flakeX = pr.x + pr.w/2 + Math.cos(angle) * dist;
+          const flakeY = pr.y + pr.h/2 + Math.sin(angle) * dist * 0.5;
+          ctx.beginPath();
+          ctx.arc(flakeX, flakeY, 3 + Math.sin(G.t * 10 + i) * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // Cold aura
+        const grad = ctx.createRadialGradient(pr.x + pr.w/2, pr.y + pr.h/2, 0, pr.x + pr.w/2, pr.y + pr.h/2, 70);
+        grad.addColorStop(0, 'rgba(103, 232, 249, 0.3)');
+        grad.addColorStop(0.5, 'rgba(103, 232, 249, 0.15)');
+        grad.addColorStop(1, 'rgba(103, 232, 249, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 50, pr.y - 50, pr.w + 100, pr.h + 100);
+      } else if (G.ultType === 'swordStorm') {
+        // Chisa: Sword storm aura
+        const grad = ctx.createRadialGradient(pr.x + pr.w/2, pr.y + pr.h/2, 0, pr.x + pr.w/2, pr.y + pr.h/2, 50);
+        grad.addColorStop(0, 'rgba(231,76,60,0.6)');
+        grad.addColorStop(1, 'rgba(231,76,60,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 25, pr.y - 25, pr.w + 50, pr.h + 50);
+        // Spinning blades effect
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 3; i++) {
+          const angle = G.t * 8 + i * Math.PI * 2 / 3;
+          const dist = 30;
+          ctx.beginPath();
+          ctx.moveTo(pr.x + pr.w/2 + Math.cos(angle) * dist, pr.y + pr.h/2 + Math.sin(angle) * dist);
+          ctx.lineTo(pr.x + pr.w/2 + Math.cos(angle + 0.3) * (dist + 15), pr.y + pr.h/2 + Math.sin(angle + 0.3) * (dist + 15));
+          ctx.stroke();
+        }
+      } else if (G.ultType === 'headbutt') {
+        // Butsuo: Head-first flying pose with power aura
+        const grad = ctx.createRadialGradient(pr.x + pr.w + 20, pr.y + pr.h/2, 0, pr.x + pr.w + 20, pr.y + pr.h/2, 80);
+        grad.addColorStop(0, 'rgba(255,255,255,0.6)');
+        grad.addColorStop(0.5, 'rgba(236,240,241,0.3)');
+        grad.addColorStop(1, 'rgba(236,240,241,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 20, pr.y - 40, pr.w + 100, pr.h + 80);
+        
+        // Speed lines behind
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 6; i++) {
+          const lineY = pr.y + pr.h * 0.2 + i * 12;
+          const offset = Math.sin(G.t * 15 + i) * 5;
+          ctx.beginPath();
+          ctx.moveTo(pr.x - 40 + offset, lineY);
+          ctx.lineTo(pr.x - 80 + offset, lineY);
+          ctx.stroke();
+        }
+        
+        // Impact waves in front of head
+        ctx.strokeStyle = 'rgba(255,200,50,0.5)';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 3; i++) {
+          const waveOffset = (G.t * 10 + i * 0.5) % 1;
+          ctx.globalAlpha = 0.5 * (1 - waveOffset);
+          ctx.beginPath();
+          ctx.arc(pr.x + pr.w + 30, pr.y + 10, 15 + waveOffset * 25, -0.5, 0.5);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 0.4 + Math.sin(G.t * 10) * 0.2;
+      } else if (G.ultType === 'poisonArmor') {
+        // Teki: Poison armor shield
+        ctx.globalAlpha = 0.5 + Math.sin(G.t * 8) * 0.2;
+        const grad = ctx.createRadialGradient(pr.x + pr.w/2, pr.y + pr.h/2, 0, pr.x + pr.w/2, pr.y + pr.h/2, 55);
+        grad.addColorStop(0, 'rgba(46, 204, 113, 0.3)');
+        grad.addColorStop(0.7, 'rgba(39, 174, 96, 0.5)');
+        grad.addColorStop(1, 'rgba(30, 132, 73, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 30, pr.y - 30, pr.w + 60, pr.h + 60);
+        
+        // Poison bubbles around
+        ctx.fillStyle = '#2ecc71';
+        for (let i = 0; i < 6; i++) {
+          const angle = G.t * 2 + i * Math.PI / 3;
+          const dist = 35 + Math.sin(G.t * 4 + i) * 5;
+          const bubbleSize = 4 + Math.sin(G.t * 6 + i * 2) * 2;
+          ctx.beginPath();
+          ctx.arc(
+            pr.x + pr.w/2 + Math.cos(angle) * dist,
+            pr.y + pr.h/2 + Math.sin(angle) * dist,
+            bubbleSize, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+      } else if (G.ultType === 'monkeyFriend') {
+        // Teki: Monkey friend running alongside
+        const monkeyX = pr.x + pr.w + 20;
+        const monkeyY = G.groundY;
+        const bounce = Math.abs(Math.sin(G.t * 12)) * 15;
+        const armSwing = Math.sin(G.t * 15) * 0.4;
+        
+        ctx.save();
+        ctx.translate(monkeyX, monkeyY - bounce);
+        
+        // Monkey body
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(0, -20, 18, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Monkey head
+        ctx.beginPath();
+        ctx.arc(5, -45, 16, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Face
+        ctx.fillStyle = '#DEB887';
+        ctx.beginPath();
+        ctx.ellipse(8, -43, 10, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(4, -46, 3, 0, Math.PI * 2);
+        ctx.arc(12, -46, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Mouth
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(8, -40, 5, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+        
+        // Ears
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(-8, -50, 7, 0, Math.PI * 2);
+        ctx.arc(20, -50, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#DEB887';
+        ctx.beginPath();
+        ctx.arc(-8, -50, 4, 0, Math.PI * 2);
+        ctx.arc(20, -50, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Arms swinging
+        ctx.fillStyle = '#8B4513';
+        ctx.save();
+        ctx.translate(-12, -25);
+        ctx.rotate(armSwing);
+        ctx.fillRect(-4, 0, 8, 25);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(12, -25);
+        ctx.rotate(-armSwing);
+        ctx.fillRect(-4, 0, 8, 25);
+        ctx.restore();
+        
+        // Legs running
+        ctx.save();
+        ctx.translate(-8, -5);
+        ctx.rotate(-armSwing * 0.8);
+        ctx.fillRect(-4, 0, 8, 20);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(8, -5);
+        ctx.rotate(armSwing * 0.8);
+        ctx.fillRect(-4, 0, 8, 20);
+        ctx.restore();
+        
+        // Tail
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-15, -15);
+        ctx.quadraticCurveTo(-35, -25 + Math.sin(G.t * 8) * 10, -40, -40 + Math.sin(G.t * 6) * 15);
+        ctx.stroke();
+        
+        // Dust clouds from running
+        ctx.fillStyle = 'rgba(139, 69, 19, 0.3)';
+        for (let i = 0; i < 3; i++) {
+          const dustX = -30 - i * 20 + Math.sin(G.t * 10 + i) * 5;
+          const dustY = 5 + Math.sin(G.t * 8 + i * 2) * 3;
+          ctx.beginPath();
+          ctx.arc(dustX, dustY, 8 - i * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.restore();
+        
+        // Store monkey hitbox for collision
+        G.monkeyRect = {
+          x: monkeyX - 18,
+          y: monkeyY - bounce - 60,
+          w: 40,
+          h: 60
+        };
+      } else if (G.ultType === 'animalFriends') {
+        // Susumu: Bird, dog, and squirrel friends
+        const bounce1 = Math.abs(Math.sin(G.t * 10)) * 10;
+        const bounce2 = Math.abs(Math.sin(G.t * 12 + 1)) * 12;
+        const bounce3 = Math.abs(Math.sin(G.t * 14 + 2)) * 8;
+        
+        // === DOG (running on ground) ===
+        const dogX = pr.x + pr.w + 30;
+        const dogY = G.groundY;
+        ctx.save();
+        ctx.translate(dogX, dogY - bounce1);
+        
+        // Dog body
+        ctx.fillStyle = '#D2691E';
+        ctx.beginPath();
+        ctx.ellipse(0, -18, 25, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dog head
+        ctx.beginPath();
+        ctx.arc(20, -25, 14, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Snout
+        ctx.fillStyle = '#F4A460';
+        ctx.beginPath();
+        ctx.ellipse(30, -22, 8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nose
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(35, -22, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye
+        ctx.beginPath();
+        ctx.arc(22, -28, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(21, -29, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Ears
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(12, -36, 6, 10, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(26, -36, 6, 10, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Legs running
+        const legSwing = Math.sin(G.t * 15) * 0.5;
+        ctx.fillStyle = '#D2691E';
+        ctx.save();
+        ctx.translate(-15, -5);
+        ctx.rotate(legSwing);
+        ctx.fillRect(-3, 0, 6, 18);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(-5, -5);
+        ctx.rotate(-legSwing);
+        ctx.fillRect(-3, 0, 6, 18);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(8, -5);
+        ctx.rotate(legSwing);
+        ctx.fillRect(-3, 0, 6, 18);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(18, -5);
+        ctx.rotate(-legSwing);
+        ctx.fillRect(-3, 0, 6, 18);
+        ctx.restore();
+        
+        // Tail wagging
+        ctx.strokeStyle = '#D2691E';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-22, -20);
+        ctx.quadraticCurveTo(-35, -30 + Math.sin(G.t * 12) * 10, -40, -40 + Math.sin(G.t * 10) * 8);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // === SQUIRREL (slightly behind) ===
+        const squirrelX = pr.x + pr.w + 80;
+        const squirrelY = G.groundY;
+        ctx.save();
+        ctx.translate(squirrelX, squirrelY - bounce2);
+        
+        // Squirrel body
+        ctx.fillStyle = '#A0522D';
+        ctx.beginPath();
+        ctx.ellipse(0, -12, 10, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(8, -22, 9, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Ears
+        ctx.beginPath();
+        ctx.ellipse(4, -30, 4, 6, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(12, -30, 4, 6, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(12, -23, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(11, -24, 1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nose
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(16, -20, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Fluffy tail
+        ctx.fillStyle = '#8B4513';
+        const tailWave = Math.sin(G.t * 8) * 0.3;
+        ctx.save();
+        ctx.translate(-8, -15);
+        ctx.rotate(tailWave);
+        ctx.beginPath();
+        ctx.ellipse(0, -15, 8, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-3, -30, 6, 10, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Little paws running
+        ctx.fillStyle = '#A0522D';
+        const pawSwing = Math.sin(G.t * 18) * 0.4;
+        ctx.save();
+        ctx.translate(-5, -2);
+        ctx.rotate(pawSwing);
+        ctx.fillRect(-2, 0, 4, 10);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(5, -2);
+        ctx.rotate(-pawSwing);
+        ctx.fillRect(-2, 0, 4, 10);
+        ctx.restore();
+        
+        ctx.restore();
+        
+        // === BIRD (flying above) ===
+        const birdX = pr.x + pr.w/2 + 40 + Math.sin(G.t * 3) * 20;
+        const birdY = pr.y - 50 + Math.sin(G.t * 5) * 15;
+        const wingFlap = Math.sin(G.t * 15) * 0.6;
+        
+        ctx.save();
+        ctx.translate(birdX, birdY);
+        
+        // Body
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(10, -3, 7, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Beak
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(15, -3);
+        ctx.lineTo(22, -2);
+        ctx.lineTo(15, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Eye
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(12, -5, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Wings flapping
+        ctx.fillStyle = '#2980b9';
+        ctx.save();
+        ctx.rotate(wingFlap);
+        ctx.beginPath();
+        ctx.ellipse(-5, -8, 15, 6, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.rotate(-wingFlap);
+        ctx.beginPath();
+        ctx.ellipse(-5, 8, 15, 6, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Tail feathers
+        ctx.fillStyle = '#2980b9';
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-22, -5);
+        ctx.lineTo(-20, 0);
+        ctx.lineTo(-22, 5);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Store animal hitboxes for collision
+        G.animalRects = [
+          { x: dogX - 25, y: dogY - bounce1 - 40, w: 60, h: 45 },
+          { x: squirrelX - 15, y: squirrelY - bounce2 - 35, w: 30, h: 40 },
+          { x: birdX - 15, y: birdY - 15, w: 35, h: 25 }
+        ];
+      } else if (G.ultType === 'illusionStorm') {
+        // Shinji: Purple illusion storm
+        ctx.globalAlpha = 0.6;
+        
+        // Swirling purple vortex around player
+        for (let i = 0; i < 8; i++) {
+          const angle = G.t * 3 + i * Math.PI / 4;
+          const dist = 40 + Math.sin(G.t * 5 + i) * 15;
+          const size = 15 + Math.sin(G.t * 7 + i * 2) * 5;
+          
+          // Illusion copies/ghosts
+          ctx.fillStyle = `rgba(155, 89, 182, ${0.3 + Math.sin(G.t * 4 + i) * 0.2})`;
+          ctx.beginPath();
+          ctx.arc(
+            pr.x + pr.w/2 + Math.cos(angle) * dist,
+            pr.y + pr.h/2 + Math.sin(angle) * dist * 0.7,
+            size, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+        
+        // Central eye effect
+        ctx.fillStyle = '#9b59b6';
+        ctx.shadowColor = '#9b59b6';
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.arc(pr.x + pr.w/2, pr.y + 10, 12 + Math.sin(G.t * 8) * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(pr.x + pr.w/2, pr.y + 10, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Spiral lines
+        ctx.strokeStyle = 'rgba(155, 89, 182, 0.5)';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          for (let j = 0; j < 20; j++) {
+            const a = G.t * 2 + i * Math.PI * 2/3 + j * 0.3;
+            const r = 20 + j * 4;
+            const x = pr.x + pr.w/2 + Math.cos(a) * r;
+            const y = pr.y + pr.h/2 + Math.sin(a) * r * 0.5;
+            if (j === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      } else if (G.ultType === 'windSword') {
+        // Kazuya: Massive wind sword aura
+        ctx.globalAlpha = 0.5;
+        
+        // Wind aura around player
+        const grad = ctx.createRadialGradient(pr.x + pr.w/2, pr.y + pr.h/2, 0, pr.x + pr.w/2, pr.y + pr.h/2, 80);
+        grad.addColorStop(0, 'rgba(52, 152, 219, 0.2)');
+        grad.addColorStop(0.5, 'rgba(52, 152, 219, 0.4)');
+        grad.addColorStop(1, 'rgba(52, 152, 219, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pr.x - 60, pr.y - 40, pr.w + 200, pr.h + 80);
+        
+        // Giant wind sword extending forward
+        ctx.save();
+        ctx.translate(pr.x + pr.w + 20, pr.y + pr.h * 0.4);
+        
+        // Sword blade made of wind
+        const swordWave = Math.sin(G.t * 10) * 5;
+        ctx.fillStyle = 'rgba(135, 206, 235, 0.7)';
+        ctx.beginPath();
+        ctx.moveTo(0, -15 + swordWave);
+        ctx.lineTo(120, -8);
+        ctx.lineTo(140, 0);
+        ctx.lineTo(120, 8);
+        ctx.lineTo(0, 15 + swordWave);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Wind streaks
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.6;
+        for (let i = 0; i < 5; i++) {
+          const yOff = -10 + i * 5;
+          const xStart = 10 + Math.sin(G.t * 15 + i) * 10;
+          ctx.beginPath();
+          ctx.moveTo(xStart, yOff);
+          ctx.lineTo(xStart + 60 + Math.random() * 30, yOff + Math.sin(G.t * 8 + i) * 3);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+        
+        // Cutting waves flying forward
+        ctx.strokeStyle = 'rgba(135, 206, 235, 0.8)';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 3; i++) {
+          const waveX = pr.x + pr.w + 50 + ((G.t * 200 + i * 60) % 150);
+          ctx.beginPath();
+          ctx.arc(waveX, pr.y + pr.h/2, 20 + i * 5, -0.8, 0.8);
+          ctx.stroke();
+        }
+      } else if (G.ultType === 'darkAura') {
+        // Togami: Giant crow flying alongside
+        const crowX = pr.x + pr.w + 60;
+        const crowY = pr.y - 40;
+        const wingFlap = Math.sin(G.t * 8) * 0.4;
+        const hover = Math.sin(G.t * 4) * 8;
+        
+        ctx.save();
+        ctx.translate(crowX, crowY + hover);
+        
+        // Shadow on ground
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(0, G.groundY - crowY - hover + 30, 80, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.globalAlpha = 1;
+        
+        // Left wing
+        ctx.save();
+        ctx.rotate(wingFlap);
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.quadraticCurveTo(-80, -30 - wingFlap * 30, -120, 10);
+        ctx.quadraticCurveTo(-90, 20, -60, 15);
+        ctx.quadraticCurveTo(-40, 10, -10, 5);
+        ctx.closePath();
+        ctx.fill();
+        // Wing feather details
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-20 - i * 18, 5 - i * 5);
+          ctx.lineTo(-30 - i * 20, -10 - wingFlap * 20 + i * 3);
+          ctx.stroke();
+        }
+        ctx.restore();
+        
+        // Right wing
+        ctx.save();
+        ctx.rotate(-wingFlap);
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.quadraticCurveTo(80, -30 + wingFlap * 30, 120, 10);
+        ctx.quadraticCurveTo(90, 20, 60, 15);
+        ctx.quadraticCurveTo(40, 10, 10, 5);
+        ctx.closePath();
+        ctx.fill();
+        // Wing feather details
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(20 + i * 18, 5 - i * 5);
+          ctx.lineTo(30 + i * 20, -10 + wingFlap * 20 + i * 3);
+          ctx.stroke();
+        }
+        ctx.restore();
+        
+        // Body
+        ctx.fillStyle = '#0a0a0a';
+        ctx.beginPath();
+        ctx.ellipse(0, 10, 35, 45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(0, -40, 28, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Beak
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.moveTo(0, -35);
+        ctx.lineTo(25, -45);
+        ctx.lineTo(30, -40);
+        ctx.lineTo(5, -30);
+        ctx.closePath();
+        ctx.fill();
+        // Beak detail
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(5, -35);
+        ctx.lineTo(25, -42);
+        ctx.stroke();
+        
+        // Eye - glowing red
+        ctx.fillStyle = '#e74c3c';
+        ctx.shadowColor = '#e74c3c';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(12, -45, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Eye pupil
+        ctx.fillStyle = '#000';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(13, -45, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // Eye shine
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(10, -47, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Tail feathers
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.moveTo(-15, 50);
+        ctx.lineTo(-25, 90);
+        ctx.lineTo(-10, 85);
+        ctx.lineTo(0, 95);
+        ctx.lineTo(10, 85);
+        ctx.lineTo(25, 90);
+        ctx.lineTo(15, 50);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Feathers falling
+        ctx.fillStyle = '#1a1a1a';
+        for (let i = 0; i < 4; i++) {
+          const featherY = ((G.t * 80 + i * 40) % 120);
+          const featherX = Math.sin(G.t * 3 + i * 2) * 30 - 50 - i * 20;
+          ctx.save();
+          ctx.translate(featherX, featherY);
+          ctx.rotate(Math.sin(G.t * 4 + i) * 0.5);
+          ctx.globalAlpha = 0.7;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        
+        ctx.restore();
+        
+        // Store crow hitbox for collision
+        G.crowRect = {
+          x: crowX - 100,
+          y: crowY + hover - 60,
+          w: 200,
+          h: 150
+        };
+      } else if (G.ultType === 'paperWings') {
+        // Kagi: Paper wings - she flies with origami wings
+        const wingFlap = Math.sin(G.t * 10) * 0.3;
+        const centerX = pr.x + pr.w / 2;
+        const centerY = pr.y + pr.h / 2;
+        
+        // Paper particles floating around
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < 8; i++) {
+          const angle = G.t * 2 + i * Math.PI / 4;
+          const dist = 50 + Math.sin(G.t * 3 + i) * 20;
+          const px = centerX + Math.cos(angle) * dist;
+          const py = centerY + Math.sin(angle) * dist * 0.6;
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(G.t * 4 + i);
+          ctx.fillRect(-6, -4, 12, 8);
+          ctx.restore();
+        }
+        
+        ctx.globalAlpha = 1;
+        
+        // Left paper wing
+        ctx.save();
+        ctx.translate(centerX - 10, centerY - 5);
+        ctx.rotate(-0.2 + wingFlap);
+        
+        // Wing base layer
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-30, -40);
+        ctx.lineTo(-60, -30);
+        ctx.lineTo(-80, -50);
+        ctx.lineTo(-70, -10);
+        ctx.lineTo(-90, 10);
+        ctx.lineTo(-50, 5);
+        ctx.lineTo(-30, 20);
+        ctx.lineTo(0, 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Wing fold lines
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.lineTo(-60, -20);
+        ctx.moveTo(-20, -10);
+        ctx.lineTo(-70, -30);
+        ctx.moveTo(-10, 10);
+        ctx.lineTo(-60, 0);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Right paper wing
+        ctx.save();
+        ctx.translate(centerX + 10, centerY - 5);
+        ctx.rotate(0.2 - wingFlap);
+        
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(30, -40);
+        ctx.lineTo(60, -30);
+        ctx.lineTo(80, -50);
+        ctx.lineTo(70, -10);
+        ctx.lineTo(90, 10);
+        ctx.lineTo(50, 5);
+        ctx.lineTo(30, 20);
+        ctx.lineTo(0, 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Wing fold lines
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.lineTo(60, -20);
+        ctx.moveTo(20, -10);
+        ctx.lineTo(70, -30);
+        ctx.moveTo(10, 10);
+        ctx.lineTo(60, 0);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Small paper trail
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = 0.5;
+        for (let i = 0; i < 5; i++) {
+          const trailX = centerX - 40 - i * 25;
+          const trailY = centerY + Math.sin(G.t * 6 + i * 2) * 10;
+          ctx.save();
+          ctx.translate(trailX, trailY);
+          ctx.rotate(G.t * 5 + i);
+          ctx.beginPath();
+          ctx.moveTo(-8, 0);
+          ctx.lineTo(0, -5);
+          ctx.lineTo(8, 0);
+          ctx.lineTo(0, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      } else if (G.ultType === 'fireDragon') {
+        // Akemi: Giant fire dragon flying alongside
+        const dragonX = pr.x + pr.w + 80;
+        const dragonY = pr.y - 30;
+        const wingFlap = Math.sin(G.t * 6) * 0.3;
+        const bodyWave = Math.sin(G.t * 4) * 10;
+        
+        ctx.save();
+        ctx.translate(dragonX, dragonY + bodyWave);
+        
+        // Fire glow around dragon
+        ctx.globalAlpha = 0.4;
+        const fireGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 120);
+        fireGlow.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+        fireGlow.addColorStop(0.5, 'rgba(255, 50, 0, 0.4)');
+        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = fireGlow;
+        ctx.fillRect(-120, -80, 240, 160);
+        
+        ctx.globalAlpha = 1;
+        
+        // Dragon body (serpentine)
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 50, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dragon scales pattern
+        ctx.fillStyle = '#e74c3c';
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.ellipse(-20 + i * 12, Math.sin(i) * 5, 8, 12, 0, 0, Math.PI);
+          ctx.fill();
+        }
+        
+        // Dragon head
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath();
+        ctx.ellipse(55, -10, 35, 25, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dragon snout
+        ctx.beginPath();
+        ctx.moveTo(75, -15);
+        ctx.lineTo(100, -20);
+        ctx.lineTo(95, -5);
+        ctx.lineTo(75, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Dragon nostrils with fire
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.arc(95, -15, 4, 0, Math.PI * 2);
+        ctx.arc(95, -8, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dragon eye - fierce
+        ctx.fillStyle = '#f1c40f';
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.ellipse(65, -18, 10, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.ellipse(67, -18, 4, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dragon horns
+        ctx.fillStyle = '#8b0000';
+        ctx.beginPath();
+        ctx.moveTo(45, -25);
+        ctx.lineTo(35, -55);
+        ctx.lineTo(50, -30);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(55, -28);
+        ctx.lineTo(50, -50);
+        ctx.lineTo(60, -30);
+        ctx.fill();
+        
+        // Dragon wings
+        ctx.save();
+        ctx.translate(-10, -20);
+        ctx.rotate(wingFlap);
+        ctx.fillStyle = '#e74c3c';
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-40, -60 - wingFlap * 40, -80, -30);
+        ctx.quadraticCurveTo(-60, -10, -40, 0);
+        ctx.quadraticCurveTo(-20, 5, 0, 0);
+        ctx.fill();
+        // Wing membrane lines
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-5 - i * 8, -5);
+          ctx.lineTo(-20 - i * 15, -30 - wingFlap * 20);
+          ctx.stroke();
+        }
+        ctx.restore();
+        
+        ctx.save();
+        ctx.translate(-10, 20);
+        ctx.rotate(-wingFlap);
+        ctx.fillStyle = '#e74c3c';
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-40, 60 + wingFlap * 40, -80, 30);
+        ctx.quadraticCurveTo(-60, 10, -40, 0);
+        ctx.quadraticCurveTo(-20, -5, 0, 0);
+        ctx.fill();
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-5 - i * 8, 5);
+          ctx.lineTo(-20 - i * 15, 30 + wingFlap * 20);
+          ctx.stroke();
+        }
+        ctx.restore();
+        
+        // Dragon tail (wavy)
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-45, 0);
+        ctx.quadraticCurveTo(-80, Math.sin(G.t * 5) * 20, -110, Math.sin(G.t * 6) * 30);
+        ctx.quadraticCurveTo(-130, Math.sin(G.t * 7) * 25, -150, Math.sin(G.t * 8) * 15);
+        ctx.stroke();
+        // Tail tip
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.moveTo(-150, Math.sin(G.t * 8) * 15);
+        ctx.lineTo(-170, Math.sin(G.t * 8) * 15 - 15);
+        ctx.lineTo(-165, Math.sin(G.t * 8) * 15);
+        ctx.lineTo(-170, Math.sin(G.t * 8) * 15 + 15);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Fire breath
+        ctx.globalAlpha = 0.8;
+        for (let i = 0; i < 6; i++) {
+          const fireX = 100 + i * 25 + Math.sin(G.t * 10 + i) * 10;
+          const fireY = -12 + Math.sin(G.t * 8 + i * 2) * 8;
+          const fireSize = 20 - i * 2;
+          
+          const fireGrad = ctx.createRadialGradient(fireX, fireY, 0, fireX, fireY, fireSize);
+          fireGrad.addColorStop(0, '#fff');
+          fireGrad.addColorStop(0.3, '#ff0');
+          fireGrad.addColorStop(0.6, '#f80');
+          fireGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+          ctx.fillStyle = fireGrad;
+          ctx.beginPath();
+          ctx.arc(fireX, fireY, fireSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.restore();
+        
+        // Store dragon hitbox for collision
+        G.dragonRect = {
+          x: dragonX - 80,
+          y: dragonY + bodyWave - 50,
+          w: 250,
+          h: 100
+        };
+      } else if (G.ultType === 'mysticLightning') {
+        // Ryoken: Mystic lightning - arms raised with lightning
+        const centerX = pr.x + pr.w / 2;
+        const centerY = pr.y + pr.h / 2;
+        
+        // Big illusion eye above
+        ctx.save();
+        ctx.translate(centerX, pr.y - 80);
+        
+        // Eye glow
+        ctx.globalAlpha = 0.6 + Math.sin(G.t * 6) * 0.2;
+        const eyeGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 80);
+        eyeGlow.addColorStop(0, 'rgba(241, 196, 15, 0.8)');
+        eyeGlow.addColorStop(0.5, 'rgba(155, 89, 182, 0.5)');
+        eyeGlow.addColorStop(1, 'rgba(155, 89, 182, 0)');
+        ctx.fillStyle = eyeGlow;
+        ctx.fillRect(-80, -50, 160, 100);
+        
+        ctx.globalAlpha = 1;
+        
+        // Giant eye
+        ctx.fillStyle = '#9b59b6';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 50, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Iris
+        ctx.fillStyle = '#f1c40f';
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Pupil
+        ctx.fillStyle = '#000';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Lightning bolts
+        ctx.strokeStyle = '#f1c40f';
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 6; i++) {
+          const angle = G.t * 2 + i * Math.PI / 3;
+          const startX = centerX + Math.cos(angle) * 30;
+          const startY = pr.y - 60;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          for (let j = 0; j < 5; j++) {
+            const lx = startX + Math.cos(angle + Math.PI/2) * (40 + j * 30) + rand(-15, 15);
+            const ly = startY + j * 40 + rand(-10, 10);
+            ctx.lineTo(lx, ly);
+          }
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        
+        // Store lightning hitbox (large area)
+        G.lightningRect = {
+          x: centerX - 150,
+          y: pr.y - 100,
+          w: 300,
+          h: 250
+        };
+      } else if (G.ultType === 'arrowRain') {
+        // Riku: Arrow rain - continuous arrows from above
+        G.arrowRainTimer = (G.arrowRainTimer || 0) + G.dt;
+        
+        // Spawn multiple arrows continuously
+        if (G.arrowRainTimer > 0.08) {
+          G.arrowRainTimer = 0;
+          // Spawn 3 arrows at random positions
+          for (let i = 0; i < 3; i++) {
+            G.projectiles.push({
+              type: 'rainArrow',
+              x: pr.x + rand(30, 350),
+              y: -20 - rand(0, 50),
+              w: 40,
+              h: 5,
+              vx: 0,
+              vy: 500 + rand(0, 200),
+              life: 3
+            });
+          }
+        }
+        
+        // Visual effect - bow drawn
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(pr.x + pr.w + 20, pr.y + pr.h/2, 25, -Math.PI/2, Math.PI/2);
+        ctx.stroke();
+        
+        // Bow string
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pr.x + pr.w + 20, pr.y + pr.h/2 - 25);
+        ctx.lineTo(pr.x + pr.w + 10, pr.y + pr.h/2);
+        ctx.lineTo(pr.x + pr.w + 20, pr.y + pr.h/2 + 25);
+        ctx.stroke();
+        
+        // Glow effect
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(pr.x + pr.w + 40, -10, 280, G.groundY + 10);
+        ctx.globalAlpha = 1;
+      } else if (G.ultType === 'shadowClone') {
+        // Joaryu: Shadow clone running alongside
+        const cloneX = pr.x + pr.w + 40;
+        const cloneY = G.groundY;
+        const bounce = Math.abs(Math.sin(G.t * 12)) * 10;
+        
+        ctx.save();
+        ctx.translate(cloneX, cloneY - bounce);
+        ctx.globalAlpha = 0.7;
+        
+        // Clone body (similar to player but purple/shadowy)
+        ctx.fillStyle = '#8e44ad';
+        ctx.fillRect(-15, -60, 30, 50);
+        
+        // Clone head
+        ctx.fillStyle = '#9b59b6';
+        ctx.beginPath();
+        ctx.arc(0, -70, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Clone hair
+        ctx.fillStyle = '#9b59b6';
+        ctx.fillRect(-18, -85, 36, 15);
+        ctx.beginPath();
+        ctx.moveTo(-18, -85);
+        ctx.lineTo(-22, -95);
+        ctx.lineTo(-12, -85);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(18, -85);
+        ctx.lineTo(22, -95);
+        ctx.lineTo(12, -85);
+        ctx.fill();
+        
+        // Clone arms (attacking pose)
+        ctx.fillStyle = '#8e44ad';
+        const armAngle = Math.sin(G.t * 10) * 0.5;
+        ctx.save();
+        ctx.translate(15, -50);
+        ctx.rotate(armAngle - 0.5);
+        ctx.fillRect(0, 0, 25, 8);
+        // Kunai in hand
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.moveTo(25, 4);
+        ctx.lineTo(40, 4);
+        ctx.lineTo(35, 0);
+        ctx.lineTo(40, 4);
+        ctx.lineTo(35, 8);
+        ctx.fill();
+        ctx.restore();
+        
+        // Shadow effect
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 25, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Store clone hitbox
+        G.cloneRect = {
+          x: cloneX - 20,
+          y: cloneY - bounce - 90,
+          w: 70,
+          h: 95
+        };
+      }
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Special pose for Butsuo's headbutt - Superman flying pose
+    if (G.ultActive && G.ultType === 'headbutt' && selectedChar === 'butsuo') {
+      ctx.save();
+      
+      // Position for horizontal flight
+      const centerX = pr.x + pr.w / 2;
+      const centerY = pr.y + pr.h / 2;
+      const wobble = Math.sin(G.t * 6) * 3;
+      
+      // Cape effect (flowing behind)
+      ctx.fillStyle = '#c41e3a';
+      ctx.beginPath();
+      ctx.moveTo(centerX - 30, centerY - 10);
+      ctx.quadraticCurveTo(centerX - 70 + Math.sin(G.t * 8) * 15, centerY, centerX - 50 + Math.sin(G.t * 10) * 10, centerY + 25);
+      ctx.quadraticCurveTo(centerX - 40, centerY + 15, centerX - 30, centerY + 10);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Body - horizontal, slightly angled up
+      ctx.save();
+      ctx.translate(centerX, centerY + wobble);
+      ctx.rotate(-0.15); // Slight upward angle
+      
+      // Torso
+      ctx.fillStyle = '#2a2a3a';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 35, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Head leading the charge
+      const headX = 45;
+      const headY = -8;
+      ctx.fillStyle = '#f5deb3';
+      ctx.beginPath();
+      ctx.arc(headX, headY, 16, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Determined face
+      ctx.fillStyle = '#222';
+      // Narrowed eyes
+      ctx.fillRect(headX - 8, headY - 3, 6, 3);
+      ctx.fillRect(headX + 2, headY - 3, 6, 3);
+      // Eyebrows (angry)
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(headX - 9, headY - 7);
+      ctx.lineTo(headX - 3, headY - 5);
+      ctx.moveTo(headX + 9, headY - 7);
+      ctx.lineTo(headX + 3, headY - 5);
+      ctx.stroke();
+      // Gritted teeth
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(headX - 5, headY + 5, 10, 4);
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(headX - 4 + i * 3, headY + 5);
+        ctx.lineTo(headX - 4 + i * 3, headY + 9);
+        ctx.stroke();
+      }
+      
+      // Hair (white, swept back)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(headX + 10, headY - 12);
+      ctx.quadraticCurveTo(headX - 5, headY - 20, headX - 15, headY - 8);
+      ctx.quadraticCurveTo(headX - 10, headY - 5, headX, headY - 10);
+      ctx.quadraticCurveTo(headX + 5, headY - 15, headX + 10, headY - 12);
+      ctx.fill();
+      
+      // Arms - Superman style, fists forward
+      ctx.fillStyle = '#f5deb3';
+      // Right arm stretched forward
+      ctx.save();
+      ctx.translate(25, -5);
+      ctx.rotate(-0.2);
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(0, -5, 30, 10);
+      ctx.fillStyle = '#f5deb3';
+      ctx.beginPath();
+      ctx.arc(32, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Left arm stretched forward
+      ctx.save();
+      ctx.translate(25, 5);
+      ctx.rotate(0.2);
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(0, -5, 30, 10);
+      ctx.fillStyle = '#f5deb3';
+      ctx.beginPath();
+      ctx.arc(32, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Legs stretched back
+      ctx.fillStyle = '#2a2a3a';
+      // Right leg
+      ctx.save();
+      ctx.translate(-25, -8);
+      ctx.rotate(0.1);
+      ctx.fillRect(-35, -6, 40, 12);
+      // Foot
+      ctx.fillStyle = '#1a1a2a';
+      ctx.fillRect(-40, -5, 8, 10);
+      ctx.restore();
+      
+      // Left leg
+      ctx.save();
+      ctx.translate(-25, 8);
+      ctx.rotate(-0.1);
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(-35, -6, 40, 12);
+      // Foot
+      ctx.fillStyle = '#1a1a2a';
+      ctx.fillRect(-40, -5, 8, 10);
+      ctx.restore();
+      
+      ctx.restore(); // End rotation
+      
+      // Wind/speed effects
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) {
+        const lineX = centerX - 50 - i * 15;
+        const lineY = centerY - 20 + i * 5 + Math.sin(G.t * 10 + i) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lineX, lineY);
+        ctx.lineTo(lineX - 25, lineY);
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+      ctx.restore();
+      return; // Skip normal drawing
+    }
+
+    // Body
+    ctx.fillStyle = '#2a2a3a';
+    roundRect(pr.x, pr.y, pr.w, pr.h, 8);
+    ctx.fill();
+
+    // Head
+    const headY = pr.y - 4;
+    const headSize = selectedChar === 'chisa' ? 14 : (selectedChar === 'butsuo' ? 24 : 18);
+    // Skin color - Chisa has purple skin
+    ctx.fillStyle = char.skinColor || '#f5deb3';
+    ctx.beginPath();
+    ctx.arc(pr.x + pr.w / 2, headY + headSize / 2 + 8, headSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = char.hairColor;
+    ctx.beginPath();
+    if (selectedChar === 'usagi') {
+      // Usagi: Long golden hair
+      ctx.ellipse(pr.x + pr.w / 2, headY + 10, 14, 10, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(pr.x + pr.w / 2 - 14, headY + 10, 6, 40);
+      ctx.fillRect(pr.x + pr.w / 2 + 8, headY + 10, 6, 40);
+    } else if (selectedChar === 'haru') {
+      // Haru: White hair parted to two sides, long
+      // Top of head
+      ctx.ellipse(pr.x + pr.w / 2, headY + 8, 13, 9, 0, Math.PI, 0);
+      ctx.fill();
+      // Left side - long flowing hair
+      ctx.fillRect(pr.x + pr.w / 2 - 16, headY + 6, 5, 45);
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 16, headY + 51);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 20, headY + 56, pr.x + pr.w / 2 - 14, headY + 60);
+      ctx.lineTo(pr.x + pr.w / 2 - 11, headY + 51);
+      ctx.fill();
+      // Right side - long flowing hair
+      ctx.fillRect(pr.x + pr.w / 2 + 11, headY + 6, 5, 45);
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 11, headY + 51);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 20, headY + 56, pr.x + pr.w / 2 + 14, headY + 60);
+      ctx.lineTo(pr.x + pr.w / 2 + 16, headY + 51);
+      ctx.fill();
+    } else if (selectedChar === 'ringo') {
+      // Ringo: Spiky blue hair
+      ctx.fillStyle = char.hairColor;
+      // Base hair
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 11, 7, 0, Math.PI, 0);
+      ctx.fill();
+      // Spikes
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 10, headY + 6);
+      ctx.lineTo(pr.x + pr.w / 2 - 14, headY - 8);
+      ctx.lineTo(pr.x + pr.w / 2 - 6, headY + 4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 4, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2 - 2, headY - 14);
+      ctx.lineTo(pr.x + pr.w / 2 + 2, headY + 3);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 2, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 6, headY - 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 10, headY + 5);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 8, headY + 6);
+      ctx.lineTo(pr.x + pr.w / 2 + 16, headY - 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 12, headY + 8);
+      ctx.fill();
+    } else if (selectedChar === 'chisa') {
+      // Chisa: Golden/blonde twin tails (short, cute)
+      ctx.fillStyle = char.hairColor;
+      // Top hair
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 10, 7, 0, Math.PI, 0);
+      ctx.fill();
+      // Twin tails
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 10, headY + 18, 4, 12, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 10, headY + 18, 4, 12, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Hair accessories (red ribbons)
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 10, headY + 10, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 10, headY + 10, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'butsuo') {
+      // Butsuo: Short white/silver spiky hair (more mature look)
+      ctx.fillStyle = char.hairColor;
+      // Base
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 16, 10, 0, Math.PI, 0);
+      ctx.fill();
+      // Short spikes pointing backward
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2 - 18, headY - 4);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 4, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2 - 4, headY - 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 4, headY + 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 8, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2 + 18, headY - 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 12, headY + 4);
+      ctx.fill();
+    } else if (selectedChar === 'teki') {
+      // Teki: Short wavy white hair
+      ctx.fillStyle = char.hairColor;
+      // Top wavy hair
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 10);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 8, headY - 2, pr.x + pr.w / 2 - 3, headY + 4);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2, headY - 4, pr.x + pr.w / 2 + 3, headY + 4);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 8, headY - 2, pr.x + pr.w / 2 + 12, headY + 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 10, headY + 14);
+      ctx.lineTo(pr.x + pr.w / 2 - 10, headY + 14);
+      ctx.closePath();
+      ctx.fill();
+      // Side waves
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 10);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 16, headY + 16, pr.x + pr.w / 2 - 13, headY + 22);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 10, headY + 18, pr.x + pr.w / 2 - 10, headY + 14);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 12, headY + 10);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 16, headY + 16, pr.x + pr.w / 2 + 13, headY + 22);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 10, headY + 18, pr.x + pr.w / 2 + 10, headY + 14);
+      ctx.fill();
+    } else if (selectedChar === 'susumu') {
+      // Susumu: Short neat black hair with medical headband
+      ctx.fillStyle = char.hairColor;
+      // Top flat hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 8, 13, 8, 0, Math.PI, 0);
+      ctx.fill();
+      // Side hair
+      ctx.fillRect(pr.x + pr.w / 2 - 12, headY + 8, 5, 12);
+      ctx.fillRect(pr.x + pr.w / 2 + 7, headY + 8, 5, 12);
+    } else if (selectedChar === 'shinji') {
+      // Shinji: Long black-white mixed hair (tall)
+      // Left side - black
+      ctx.fillStyle = '#222';
+      ctx.fillRect(pr.x + pr.w / 2 - 16, headY + 4, 8, 55);
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 16, headY + 59);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 20, headY + 65, pr.x + pr.w / 2 - 12, headY + 70);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 59);
+      ctx.fill();
+      // Right side - white
+      ctx.fillStyle = '#ddd';
+      ctx.fillRect(pr.x + pr.w / 2 + 8, headY + 4, 8, 55);
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 8, headY + 59);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 20, headY + 65, pr.x + pr.w / 2 + 12, headY + 70);
+      ctx.lineTo(pr.x + pr.w / 2 + 16, headY + 59);
+      ctx.fill();
+      // Top hair - split color
+      ctx.fillStyle = '#222';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 4, headY + 6, 10, 8, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = '#ddd';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 4, headY + 6, 10, 8, 0, Math.PI, 0);
+      ctx.fill();
+    } else if (selectedChar === 'kazuya') {
+      // Kazuya: Medium purple spiky hair
+      ctx.fillStyle = char.hairColor;
+      // Base hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 8, 14, 10, 0, Math.PI, 0);
+      ctx.fill();
+      // Spiky top
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 8);
+      ctx.lineTo(pr.x + pr.w / 2 - 16, headY - 6);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 5, headY + 5);
+      ctx.lineTo(pr.x + pr.w / 2 - 3, headY - 12);
+      ctx.lineTo(pr.x + pr.w / 2 + 3, headY + 4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 5, headY + 5);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY - 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 12, headY + 6);
+      ctx.fill();
+      // Side hair
+      ctx.fillRect(pr.x + pr.w / 2 - 14, headY + 8, 5, 18);
+      ctx.fillRect(pr.x + pr.w / 2 + 9, headY + 8, 5, 18);
+    } else if (selectedChar === 'togami') {
+      // Togami: Blue-white mixed hair
+      // Left side - blue
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 5, headY + 8, 10, 8, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(pr.x + pr.w / 2 - 14, headY + 8, 6, 25);
+      // Right side - white
+      ctx.fillStyle = '#ecf0f1';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 5, headY + 8, 10, 8, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(pr.x + pr.w / 2 + 8, headY + 8, 6, 25);
+      // Front bangs mixed
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 8, headY + 12);
+      ctx.lineTo(pr.x + pr.w / 2 - 5, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2, headY + 10);
+      ctx.fill();
+      ctx.fillStyle = '#ecf0f1';
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2, headY + 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 5, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY + 12);
+      ctx.fill();
+    } else if (selectedChar === 'kagi') {
+      // Kagi: Long flowing black hair
+      ctx.fillStyle = '#000';
+      // Top hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 12, 8, 0, Math.PI, 0);
+      ctx.fill();
+      // Long flowing hair on both sides
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 18, headY + 35, pr.x + pr.w / 2 - 14, headY + 55);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 50);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 10, headY + 30, pr.x + pr.w / 2 - 8, headY + 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 12, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 18, headY + 35, pr.x + pr.w / 2 + 14, headY + 55);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY + 50);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 10, headY + 30, pr.x + pr.w / 2 + 8, headY + 10);
+      ctx.fill();
+      // Front bangs
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 8, headY + 12);
+      ctx.lineTo(pr.x + pr.w / 2 - 4, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2, headY + 10);
+      ctx.lineTo(pr.x + pr.w / 2 + 4, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY + 12);
+      ctx.fill();
+    } else if (selectedChar === 'akemi') {
+      // Akemi: Long flowing golden/blonde hair
+      ctx.fillStyle = '#f1c40f';
+      // Top hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 13, 9, 0, Math.PI, 0);
+      ctx.fill();
+      // Long wavy hair on both sides
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 13, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 20, headY + 30, pr.x + pr.w / 2 - 16, headY + 55);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 14, headY + 60, pr.x + pr.w / 2 - 12, headY + 65);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 55);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 10, headY + 30, pr.x + pr.w / 2 - 8, headY + 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 13, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 20, headY + 30, pr.x + pr.w / 2 + 16, headY + 55);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 14, headY + 60, pr.x + pr.w / 2 + 12, headY + 65);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY + 55);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 10, headY + 30, pr.x + pr.w / 2 + 8, headY + 10);
+      ctx.fill();
+      // Front wavy bangs
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 10, headY + 12);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 6, headY + 2, pr.x + pr.w / 2 - 2, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2, headY + 0, pr.x + pr.w / 2 + 2, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 6, headY + 2, pr.x + pr.w / 2 + 10, headY + 12);
+      ctx.fill();
+      // Hair shine
+      ctx.fillStyle = '#f9e079';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 5, headY + 4, 3, 5, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'ryoken') {
+      // Ryoken: Blonde spiky hair
+      ctx.fillStyle = '#f1c40f';
+      // Base hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 8, 14, 10, 0, Math.PI, 0);
+      ctx.fill();
+      // Spiky top
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 12, headY + 8);
+      ctx.lineTo(pr.x + pr.w / 2 - 18, headY - 8);
+      ctx.lineTo(pr.x + pr.w / 2 - 8, headY + 4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 5, headY + 5);
+      ctx.lineTo(pr.x + pr.w / 2 - 2, headY - 15);
+      ctx.lineTo(pr.x + pr.w / 2 + 4, headY + 4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 6, headY + 5);
+      ctx.lineTo(pr.x + pr.w / 2 + 10, headY - 12);
+      ctx.lineTo(pr.x + pr.w / 2 + 14, headY + 6);
+      ctx.fill();
+      // Side hair
+      ctx.fillRect(pr.x + pr.w / 2 - 14, headY + 8, 5, 16);
+      ctx.fillRect(pr.x + pr.w / 2 + 9, headY + 8, 5, 16);
+      // Hair shine
+      ctx.fillStyle = '#f9e079';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 3, headY + 2, 2, 4, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'riku') {
+      // Riku: Short white messy hair (small character)
+      ctx.fillStyle = '#fff';
+      // Base hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 5, 10, 7, 0, Math.PI, 0);
+      ctx.fill();
+      // Messy spikes
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 8, headY + 5);
+      ctx.lineTo(pr.x + pr.w / 2 - 10, headY - 3);
+      ctx.lineTo(pr.x + pr.w / 2 - 4, headY + 3);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 2, headY + 3);
+      ctx.lineTo(pr.x + pr.w / 2, headY - 8);
+      ctx.lineTo(pr.x + pr.w / 2 + 3, headY + 3);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 4, headY + 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 8, headY - 4);
+      ctx.lineTo(pr.x + pr.w / 2 + 10, headY + 5);
+      ctx.fill();
+      // Side tufts
+      ctx.fillRect(pr.x + pr.w / 2 - 11, headY + 5, 4, 10);
+      ctx.fillRect(pr.x + pr.w / 2 + 7, headY + 5, 4, 10);
+    } else if (selectedChar === 'joaryu') {
+      // Joaryu: Long purple hair (tall character)
+      ctx.fillStyle = '#9b59b6';
+      // Top hair
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2, headY + 6, 13, 9, 0, Math.PI, 0);
+      ctx.fill();
+      // Long flowing hair on both sides
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 13, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 18, headY + 40, pr.x + pr.w / 2 - 15, headY + 70);
+      ctx.lineTo(pr.x + pr.w / 2 - 9, headY + 65);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 - 10, headY + 35, pr.x + pr.w / 2 - 8, headY + 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 + 13, headY + 8);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 18, headY + 40, pr.x + pr.w / 2 + 15, headY + 70);
+      ctx.lineTo(pr.x + pr.w / 2 + 9, headY + 65);
+      ctx.quadraticCurveTo(pr.x + pr.w / 2 + 10, headY + 35, pr.x + pr.w / 2 + 8, headY + 10);
+      ctx.fill();
+      // Front bangs - sleek
+      ctx.beginPath();
+      ctx.moveTo(pr.x + pr.w / 2 - 10, headY + 12);
+      ctx.lineTo(pr.x + pr.w / 2 - 5, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2, headY + 8);
+      ctx.lineTo(pr.x + pr.w / 2 + 5, headY + 2);
+      ctx.lineTo(pr.x + pr.w / 2 + 10, headY + 12);
+      ctx.fill();
+      // Hair shine
+      ctx.fillStyle = '#b388eb';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 5, headY + 4, 2, 4, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Headband (alın bandı) - ninja style - scale for character size
+    const bandScale = selectedChar === 'chisa' ? 0.75 : (selectedChar === 'butsuo' ? 1.3 : (selectedChar === 'teki' ? 0.9 : (selectedChar === 'riku' ? 0.8 : (selectedChar === 'joaryu' ? 1.2 : 1))));
+    const bandWidth = 24 * bandScale;
+    const bandHeight = 4 * bandScale;
+    ctx.fillStyle = selectedChar === 'chisa' ? '#9b59b6' : 
+                     selectedChar === 'teki' ? '#27ae60' : 
+                     selectedChar === 'susumu' ? '#e74c3c' : 
+                     selectedChar === 'shinji' ? '#9b59b6' :
+                     selectedChar === 'kazuya' ? '#8e44ad' :
+                     selectedChar === 'togami' ? '#555' :
+                     selectedChar === 'kagi' ? '#ecf0f1' :
+                     selectedChar === 'akemi' ? '#ff69b4' :
+                     selectedChar === 'ryoken' ? '#9b59b6' :
+                     selectedChar === 'riku' ? '#3498db' :
+                     selectedChar === 'joaryu' ? '#8e44ad' : '#c41e3a';
+    ctx.fillRect(pr.x + pr.w / 2 - bandWidth/2, headY + 6, bandWidth, bandHeight);
+    // Headband knot/tail on the side
+    ctx.beginPath();
+    ctx.moveTo(pr.x + pr.w / 2 + bandWidth/2, headY + 6);
+    ctx.lineTo(pr.x + pr.w / 2 + bandWidth/2 + 8 * bandScale, headY + 10);
+    ctx.lineTo(pr.x + pr.w / 2 + bandWidth/2 + 6 * bandScale, headY + 14);
+    ctx.lineTo(pr.x + pr.w / 2 + bandWidth/2, headY + 10);
+    ctx.fill();
+    // Metal plate on headband
+    ctx.fillStyle = '#888';
+    const plateWidth = 10 * bandScale;
+    const plateHeight = 5 * bandScale;
+    ctx.fillRect(pr.x + pr.w / 2 - plateWidth/2, headY + 5, plateWidth, plateHeight);
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pr.x + pr.w / 2 - plateWidth/2, headY + 5, plateWidth, plateHeight);
+
+    // Eyes - character specific
+    if (selectedChar === 'haru') {
+      // Haru: Red glowing eyes
+      ctx.fillStyle = '#ff0000';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+      ctx.shadowBlur = 0;
+    } else if (selectedChar === 'ringo') {
+      // Ringo: One purple eye, one normal
+      // Left eye - purple (special)
+      ctx.fillStyle = '#9333ea';
+      ctx.shadowColor = '#9333ea';
+      ctx.shadowBlur = 5;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillStyle = '#c084fc';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.shadowBlur = 0;
+      // Right eye - normal white
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(pr.x + pr.w / 2 + 4, headY + 14, 2, 2);
+    } else if (selectedChar === 'chisa') {
+      // Chisa: Big golden/amber eyes (cute anime style)
+      const eyeY = headY + 12;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 5, eyeY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 5, eyeY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 5, eyeY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 5, eyeY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye shine
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 6, eyeY - 1, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 4, eyeY - 1, 1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'butsuo') {
+      // Butsuo: Stern eyes (narrow, serious)
+      const eyeY = headY + 14;
+      ctx.fillStyle = '#222';
+      ctx.fillRect(pr.x + pr.w / 2 - 10, eyeY, 7, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, eyeY, 7, 4);
+      // Pupils
+      ctx.fillStyle = '#555';
+      ctx.fillRect(pr.x + pr.w / 2 - 8, eyeY + 1, 3, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 5, eyeY + 1, 3, 2);
+    } else if (selectedChar === 'teki') {
+      // Teki: Glowing green poison eyes
+      ctx.fillStyle = '#2ecc71';
+      ctx.shadowColor = '#27ae60';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine
+      ctx.fillStyle = '#82e0aa';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+      ctx.shadowBlur = 0;
+    } else if (selectedChar === 'susumu') {
+      // Susumu: Calm focused eyes
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine
+      ctx.fillStyle = '#D2691E';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+    } else if (selectedChar === 'shinji') {
+      // Shinji: Glowing purple illusion eyes
+      ctx.fillStyle = '#9b59b6';
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye glow center
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 14, 3, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 14, 3, 2);
+      ctx.shadowBlur = 0;
+    } else if (selectedChar === 'kazuya') {
+      // Kazuya: Sharp blue-purple eyes
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine
+      ctx.fillStyle = '#87ceeb';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+    } else if (selectedChar === 'togami') {
+      // Togami: Dark mysterious eyes with slight glow
+      ctx.fillStyle = '#222';
+      ctx.shadowColor = '#3498db';
+      ctx.shadowBlur = 5;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine - blue hint
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+      ctx.shadowBlur = 0;
+    } else if (selectedChar === 'kagi') {
+      // Kagi: Soft gray eyes with paper-like shine
+      ctx.fillStyle = '#666';
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine - white like paper
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+    } else if (selectedChar === 'akemi') {
+      // Akemi: Beautiful pink/magenta eyes with sparkle
+      const eyeY = headY + 12;
+      ctx.fillStyle = '#ff1493';
+      ctx.shadowColor = '#ff69b4';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 5, eyeY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 5, eyeY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 5, eyeY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 5, eyeY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye sparkles
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 6, eyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 4, eyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'ryoken') {
+      // Ryoken: Glowing purple illusion eyes
+      ctx.fillStyle = '#9b59b6';
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Yellow glow center (like his hair color)
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 14, 3, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 14, 3, 2);
+      ctx.shadowBlur = 0;
+    } else if (selectedChar === 'riku') {
+      // Riku: Sharp blue archer eyes
+      const eyeY = headY + 11;
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 - 4, eyeY, 2.5, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(pr.x + pr.w / 2 + 4, eyeY, 2.5, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 4, eyeY, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 4, eyeY, 1, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye shine
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 - 5, eyeY - 1, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(pr.x + pr.w / 2 + 3, eyeY - 1, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (selectedChar === 'joaryu') {
+      // Joaryu: Dark purple mysterious eyes
+      ctx.fillStyle = '#8e44ad';
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      // Eye shine
+      ctx.fillStyle = '#b388eb';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+      ctx.shadowBlur = 0;
+    } else {
+      // Usagi: Normal blue eyes
+      ctx.fillStyle = '#67e8f9';
+      ctx.fillRect(pr.x + pr.w / 2 - 7, headY + 13, 5, 4);
+      ctx.fillRect(pr.x + pr.w / 2 + 2, headY + 13, 5, 4);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(pr.x + pr.w / 2 - 6, headY + 13, 2, 2);
+      ctx.fillRect(pr.x + pr.w / 2 + 3, headY + 13, 2, 2);
+    }
+
+    // Mouth
+    ctx.fillStyle = char.skinColor === '#9b59b6' ? '#7c3aed' : '#a0522d';
+    ctx.beginPath();
+    const mouthY = selectedChar === 'butsuo' ? headY + 24 : (selectedChar === 'chisa' ? headY + 18 : headY + 21);
+    const mouthSize = selectedChar === 'butsuo' ? 4 : (selectedChar === 'chisa' ? 2 : 3);
+    ctx.arc(pr.x + pr.w / 2, mouthY, mouthSize, 0, Math.PI);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawObstacle(o) {
+    ctx.save();
+    if (o.type === 'enemy') {
+      // Enemy ninja
+      ctx.fillStyle = o.color;
+      roundRect(o.x, o.y - o.h, o.w, o.h, 6);
+      ctx.fill();
+      
+      // Head
+      ctx.fillStyle = '#444';
+      ctx.beginPath();
+      ctx.arc(o.x + o.w / 2, o.y - o.h - 8, 10, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eyes
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(o.x + o.w / 2 - 6, o.y - o.h - 10, 4, 2);
+      ctx.fillRect(o.x + o.w / 2 + 2, o.y - o.h - 10, 4, 2);
+    } else {
+      // Flying kunai
+      o.phase += G.dt * 6;
+      const bob = Math.sin(o.phase) * 4;
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y + bob);
+      ctx.lineTo(o.x + o.w, o.y + bob - o.h / 2);
+      ctx.lineTo(o.x + o.w, o.y + bob + o.h / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawProjectile(p) {
+    ctx.save();
+    if (p.type === 'spear') {
+      ctx.fillStyle = '#e0e0e0';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      roundRect(p.x, p.y - p.h / 2, p.w, p.h, 3);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Spear tip
+      ctx.beginPath();
+      ctx.moveTo(p.x + p.w, p.y);
+      ctx.lineTo(p.x + p.w + 15, p.y);
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    } else if (p.type === 'shuriken') {
+      p.spin += G.dt * 20;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.spin);
+      ctx.fillStyle = '#666';
+      ctx.strokeStyle = '#aaa';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(p.radius, -4);
+        ctx.lineTo(p.radius + 6, 0);
+        ctx.lineTo(p.radius, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (p.type === 'waterBall') {
+      // Trail
+      for (let i = 0; i < p.trail.length; i++) {
+        const t = p.trail[i];
+        ctx.globalAlpha = (i / p.trail.length) * 0.4;
+        ctx.fillStyle = '#67e8f9';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, p.radius * (i / p.trail.length) * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Main ball
+      ctx.globalAlpha = 0.8;
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+      grad.addColorStop(0, '#fff');
+      grad.addColorStop(0.4, '#67e8f9');
+      grad.addColorStop(1, '#0ea5e9');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'katanaSlash') {
+      // Chisa: Katana slash with real sword
+      p.slashPhase += G.dt * 20;
+      const swingAngle = Math.sin(p.slashPhase * 2) * 0.8;
+      
+      ctx.translate(p.x + 20, p.y);
+      ctx.rotate(swingAngle - 0.3);
+      
+      // Katana blade
+      ctx.fillStyle = '#e8e8e8';
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(55, -4);
+      ctx.lineTo(65, 0);
+      ctx.lineTo(55, 4);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Blade edge shine
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(5, -1);
+      ctx.lineTo(50, -3);
+      ctx.stroke();
+      
+      // Katana handle (tsuka)
+      ctx.fillStyle = '#2c1810';
+      ctx.fillRect(-18, -4, 20, 8);
+      
+      // Handle wrap pattern
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-16 + i * 5, -4);
+        ctx.lineTo(-14 + i * 5, 4);
+        ctx.stroke();
+      }
+      
+      // Guard (tsuba)
+      ctx.fillStyle = '#444';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Slash trail effect
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 50, -0.8 - swingAngle, 0.5 - swingAngle);
+      ctx.stroke();
+    } else if (p.type === 'punch') {
+      // Butsuo: Powerful punch effect
+      p.punchPhase += G.dt * 15;
+      const extend = Math.min(1, p.punchPhase / 3) * 40;
+      const shake = Math.sin(p.punchPhase * 30) * 2;
+      
+      ctx.translate(p.x, p.y + shake);
+      
+      // Arm
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(-15, -8, 35 + extend * 0.5, 16);
+      
+      // Fist
+      ctx.fillStyle = '#f5deb3';
+      ctx.beginPath();
+      ctx.arc(20 + extend, 0, 20, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Knuckles
+      ctx.fillStyle = '#deb887';
+      ctx.beginPath();
+      ctx.arc(32 + extend, -6, 5, 0, Math.PI * 2);
+      ctx.arc(38 + extend, -2, 5, 0, Math.PI * 2);
+      ctx.arc(38 + extend, 4, 5, 0, Math.PI * 2);
+      ctx.arc(32 + extend, 8, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Impact burst
+      if (extend > 30) {
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI - Math.PI / 2;
+          const len = 15 + Math.random() * 20;
+          ctx.beginPath();
+          ctx.moveTo(45 + extend, 0);
+          ctx.lineTo(45 + extend + Math.cos(angle) * len, Math.sin(angle) * len);
+          ctx.stroke();
+        }
+        
+        // Shockwave circles
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 3;
+        const wave = (p.punchPhase * 3) % 1;
+        ctx.beginPath();
+        ctx.arc(50 + extend, 0, 10 + wave * 30, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // "POW" text effect
+      if (extend > 35) {
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#ff4444';
+        ctx.font = 'bold 24px system-ui';
+        ctx.fillText('POW!', 55 + extend, -15);
+      }
+    } else if (p.type === 'poisonShot') {
+      // Teki: Poison projectile
+      p.spin = (p.spin || 0) + G.dt * 12;
+      ctx.translate(p.x + p.w / 2, p.y);
+      ctx.rotate(p.spin);
+      
+      // Poison ball glow
+      ctx.shadowColor = '#27ae60';
+      ctx.shadowBlur = 15;
+      
+      // Main poison ball
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.w / 2);
+      grad.addColorStop(0, '#2ecc71');
+      grad.addColorStop(0.6, '#27ae60');
+      grad.addColorStop(1, '#1e8449');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Skull symbol
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#145a32';
+      ctx.beginPath();
+      ctx.arc(-3, -2, 3, 0, Math.PI * 2);
+      ctx.arc(3, -2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-2, 3);
+      ctx.lineTo(0, 5);
+      ctx.lineTo(2, 3);
+      ctx.stroke();
+    } else if (p.type === 'needle') {
+      // Susumu: Glowing medical needle
+      p.glow += G.dt * 8;
+      
+      // Glow effect
+      ctx.shadowColor = '#e74c3c';
+      ctx.shadowBlur = 10 + Math.sin(p.glow) * 5;
+      
+      // Needle body
+      ctx.fillStyle = '#e8e8e8';
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + p.w - 5, p.y - 1);
+      ctx.lineTo(p.x + p.w, p.y);
+      ctx.lineTo(p.x + p.w - 5, p.y + 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Needle tip glow
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(p.x + p.w, p.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Handle
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(p.x - 8, p.y - 3, 10, 6);
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'eyeBeam') {
+      // Shinji: Eye beam - purple laser
+      p.glow += G.dt * 15;
+      
+      // Outer glow
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 20;
+      
+      // Beam gradient
+      const grad = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y);
+      grad.addColorStop(0, 'rgba(155, 89, 182, 0.9)');
+      grad.addColorStop(0.5, 'rgba(142, 68, 173, 1)');
+      grad.addColorStop(1, 'rgba(155, 89, 182, 0.5)');
+      ctx.fillStyle = grad;
+      
+      // Main beam
+      const waveHeight = Math.sin(p.glow) * 2;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - p.h/2 + waveHeight);
+      ctx.lineTo(p.x + p.w, p.y - p.h/4);
+      ctx.lineTo(p.x + p.w + 20, p.y);
+      ctx.lineTo(p.x + p.w, p.y + p.h/4);
+      ctx.lineTo(p.x, p.y + p.h/2 + waveHeight);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Core beam (brighter center)
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - 1);
+      ctx.lineTo(p.x + p.w, p.y);
+      ctx.lineTo(p.x, p.y + 1);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Eye source
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#9b59b6';
+      ctx.beginPath();
+      ctx.arc(p.x - 5, p.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x - 5, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'windWave') {
+      // Kazuya: Wind wave - swirling air
+      p.phase += G.dt * 10;
+      
+      ctx.translate(p.x + p.w/2, p.y);
+      
+      // Multiple arc layers for wind effect
+      for (let i = 0; i < 4; i++) {
+        const offset = Math.sin(p.phase + i * 0.5) * 5;
+        const alpha = 0.7 - i * 0.15;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = i === 0 ? '#fff' : '#87ceeb';
+        ctx.lineWidth = 4 - i;
+        
+        ctx.beginPath();
+        ctx.arc(offset, 0, 15 + i * 8, -Math.PI * 0.6, Math.PI * 0.6);
+        ctx.stroke();
+      }
+      
+      // Swirl particles
+      ctx.fillStyle = '#87ceeb';
+      ctx.globalAlpha = 0.6;
+      for (let i = 0; i < 5; i++) {
+        const angle = p.phase * 2 + i * Math.PI * 0.4;
+        const dist = 10 + i * 5;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist * 0.6, 3 - i * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (p.type === 'crowFeather') {
+      // Togami: Crow feather projectile
+      p.spin += G.dt * 6;
+      
+      ctx.translate(p.x + p.w/2, p.y);
+      ctx.rotate(p.spin * 0.5);
+      
+      // Feather shadow/glow
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 8;
+      
+      // Feather body
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2, 0);
+      ctx.quadraticCurveTo(-p.w/4, -p.h/2, p.w/2, -2);
+      ctx.lineTo(p.w/2 + 5, 0);
+      ctx.lineTo(p.w/2, 2);
+      ctx.quadraticCurveTo(-p.w/4, p.h/2, -p.w/2, 0);
+      ctx.fill();
+      
+      // Feather spine
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2, 0);
+      ctx.lineTo(p.w/2, 0);
+      ctx.stroke();
+      
+      // Feather details
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 5; i++) {
+        const fx = -p.w/3 + i * (p.w/4);
+        ctx.beginPath();
+        ctx.moveTo(fx, 0);
+        ctx.lineTo(fx + 3, -p.h/3);
+        ctx.moveTo(fx, 0);
+        ctx.lineTo(fx + 3, p.h/3);
+        ctx.stroke();
+      }
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'paperThrow') {
+      // Kagi: Sharp paper projectile
+      p.spin += G.dt * 12;
+      
+      ctx.translate(p.x + p.w/2, p.y);
+      ctx.rotate(p.spin);
+      
+      // Paper glow
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 10;
+      
+      // Paper body - folded origami style
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2, 0);
+      ctx.lineTo(0, -p.h/2);
+      ctx.lineTo(p.w/2, 0);
+      ctx.lineTo(0, p.h/2);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Paper fold lines
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2, 0);
+      ctx.lineTo(p.w/2, 0);
+      ctx.moveTo(0, -p.h/2);
+      ctx.lineTo(0, p.h/2);
+      ctx.stroke();
+      
+      // Sharp edges highlight
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2 - 2, 0);
+      ctx.lineTo(0, -p.h/2 - 2);
+      ctx.lineTo(p.w/2 + 2, 0);
+      ctx.stroke();
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'kissThrow') {
+      // Akemi: Flying kiss - heart shaped with sparkles
+      p.wobble += G.dt * 8;
+      p.phase += G.dt * 4;
+      
+      const wobbleY = Math.sin(p.wobble) * 8;
+      
+      ctx.translate(p.x + p.w/2, p.y + wobbleY);
+      ctx.rotate(Math.sin(p.phase) * 0.2);
+      
+      // Pink glow
+      ctx.shadowColor = '#ff69b4';
+      ctx.shadowBlur = 15;
+      
+      // Heart shape
+      ctx.fillStyle = '#ff1493';
+      ctx.beginPath();
+      ctx.moveTo(0, p.h * 0.3);
+      ctx.bezierCurveTo(-p.w/2, -p.h * 0.1, -p.w/2, -p.h * 0.5, 0, -p.h * 0.2);
+      ctx.bezierCurveTo(p.w/2, -p.h * 0.5, p.w/2, -p.h * 0.1, 0, p.h * 0.3);
+      ctx.fill();
+      
+      // Heart highlight
+      ctx.fillStyle = '#ff69b4';
+      ctx.beginPath();
+      ctx.ellipse(-p.w * 0.15, -p.h * 0.15, 3, 4, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Sparkles around
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 4; i++) {
+        const sparkAngle = p.phase * 2 + i * Math.PI / 2;
+        const sparkDist = 18 + Math.sin(p.wobble + i) * 3;
+        const sx = Math.cos(sparkAngle) * sparkDist;
+        const sy = Math.sin(sparkAngle) * sparkDist * 0.6;
+        const sparkSize = 2 + Math.sin(p.wobble * 2 + i) * 1;
+        ctx.globalAlpha = 0.7 + Math.sin(p.wobble + i) * 0.3;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sparkSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'illusionKill') {
+      // Ryoken: Illusion eye projectile
+      p.phase += G.dt * 6;
+      
+      ctx.translate(p.x + p.w/2, p.y);
+      ctx.rotate(Math.sin(p.phase) * 0.1);
+      
+      // Purple glow
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 20;
+      
+      // Eye shape
+      ctx.fillStyle = '#9b59b6';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.w/2, p.h/3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Pupil
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 4, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Swirling effect
+      ctx.strokeStyle = 'rgba(155, 89, 182, 0.5)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const angle = p.phase + i * Math.PI * 2/3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 25 + i * 5, angle, angle + 1);
+        ctx.stroke();
+      }
+      
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'arrowShot') {
+      // Riku: Arrow projectile
+      ctx.translate(p.x, p.y);
+      
+      // Arrow shaft
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(0, -2, p.w - 10, 4);
+      
+      // Arrow head
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.moveTo(p.w - 10, -5);
+      ctx.lineTo(p.w, 0);
+      ctx.lineTo(p.w - 10, 5);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Fletching (feathers)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-8, -6);
+      ctx.lineTo(5, 0);
+      ctx.lineTo(-8, 6);
+      ctx.closePath();
+      ctx.fill();
+    } else if (p.type === 'kunaiThrow') {
+      // Joaryu: Kunai projectile
+      p.spin += G.dt * 15;
+      
+      ctx.translate(p.x + p.w/2, p.y);
+      ctx.rotate(p.spin);
+      
+      // Kunai blade
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.moveTo(-p.w/2, 0);
+      ctx.lineTo(0, -4);
+      ctx.lineTo(p.w/2, 0);
+      ctx.lineTo(0, 4);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Handle ring
+      ctx.strokeStyle = '#8e44ad';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(-p.w/2 - 5, 0, 5, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Blade shine
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-p.w/4, -1);
+      ctx.lineTo(p.w/4, -1);
+      ctx.stroke();
+    } else if (p.type === 'rainArrow') {
+      // Riku: Arrow falling from above
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.PI / 2); // Point downward
+      
+      // Arrow shaft
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(-15, -2, 25, 4);
+      
+      // Arrow head
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.moveTo(10, -5);
+      ctx.lineTo(18, 0);
+      ctx.lineTo(10, 5);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Fletching
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-15, 0);
+      ctx.lineTo(-22, -5);
+      ctx.lineTo(-10, 0);
+      ctx.lineTo(-22, 5);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Motion blur trail
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(-15, -1, 25, 2);
+      ctx.translate(0, -10);
+      ctx.globalAlpha = 0.15;
+      ctx.fillRect(-15, -1, 25, 2);
+    }
+    ctx.restore();
+  }
+
+  function drawParticles(dt) {
+    ctx.save();
+    for (let i = G.particles.length - 1; i >= 0; i--) {
+      const p = G.particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { G.particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 600 * dt;
+      
+      ctx.globalAlpha = clamp(p.life * 2.5, 0, 0.6);
+      ctx.fillStyle = p.color || '#fff';
+      ctx.fillRect(p.x, p.y, 3, 3);
+    }
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawUI() {
+    if (!G.running && !G.gameOver) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '900 36px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('RPGTurk Ninja Runner v1.0', WORLD_W / 2, WORLD_H / 2 - 40);
+      ctx.font = '600 16px system-ui';
+      ctx.globalAlpha = 0.7;
+      ctx.fillText('Zıpla ile başla', WORLD_W / 2, WORLD_H / 2);
+      ctx.restore();
+    }
+
+    if (G.gameOver) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+      
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = '900 42px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Geberdin.', WORLD_W / 2, WORLD_H / 2 - 30);
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 22px system-ui';
+      ctx.fillText(`Skor: ${Math.floor(G.score)}`, WORLD_W / 2, WORLD_H / 2 + 10);
+      
+      ctx.font = '500 14px system-ui';
+      ctx.globalAlpha = 0.7;
+      ctx.fillText('Zıpla ile tekrar dene', WORLD_W / 2, WORLD_H / 2 + 45);
+      ctx.restore();
+    }
+
+    // Ult active indicator
+    if (G.ultActive) {
+      ctx.save();
+      ctx.fillStyle = '#a855f7';
+      ctx.font = '700 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(`✨ ${CHARACTERS[selectedChar].skillF.name} - ${G.ultTimer.toFixed(1)}s ✨`, WORLD_W / 2, 30);
+      ctx.restore();
+    }
+  }
+
+  // ===== UPDATE =====
+  function update(dt) {
+    G.t += dt;
+    G.dt = dt;
+    
+    if (!G.running) return;
+
+    G.speed = Math.min(G.speedMax, G.speed + G.speedAccel * dt);
+    G.score += dt * (G.speed / 100);
+    G.groundScroll += G.speed * dt;
+
+    // Cooldowns
+    if (G.skillXCooldown > 0) G.skillXCooldown = Math.max(0, G.skillXCooldown - dt);
+    if (G.skillFCooldown > 0) G.skillFCooldown = Math.max(0, G.skillFCooldown - dt);
+    updateSkillUI();
+
+    // Ultimate timer
+    if (G.ultActive) {
+      G.ultTimer -= dt;
+      
+      // Eagle flight: fly high
+      if (G.ultType === 'eagleFlight') {
+        G.eagleWingPhase += dt * 8;
+        // Smoothly rise to target height
+        const targetY = G.eagleTargetY + Math.sin(G.t * 2) * 20; // Gentle bobbing
+        P.y += (targetY - P.y) * 4 * dt;
+        P.vy = 0;
+        P.onGround = false;
+        
+        // Eagle particles
+        if (Math.random() < 0.3) {
+          G.particles.push({
+            x: P.x + rand(-20, P.w + 20),
+            y: P.y + rand(0, 20),
+            vx: rand(-100, -50),
+            vy: rand(-30, 30),
+            life: rand(0.3, 0.5),
+            color: '#c4b5fd'
+          });
+        }
+      }
+      
+      // Headbutt: fly forward through enemies at ground level
+      if (G.ultType === 'headbutt') {
+        const targetY = G.headbuttY + Math.sin(G.t * 6) * 5; // Very slight bobbing
+        P.y += (targetY - P.y) * 8 * dt;
+        P.vy = 0;
+        P.onGround = false;
+        
+        // Ground dust particles
+        if (Math.random() < 0.5) {
+          G.particles.push({
+            x: P.x - rand(10, 40),
+            y: G.groundY + rand(-5, 5),
+            vx: rand(-100, -50),
+            vy: rand(-40, -10),
+            life: rand(0.2, 0.4),
+            color: '#8b7355'
+          });
+        }
+        
+        // Headbutt particles
+        if (Math.random() < 0.4) {
+          G.particles.push({
+            x: P.x + P.w + rand(0, 20),
+            y: P.y - P.h / 2 + rand(-20, 20),
+            vx: rand(-150, -80),
+            vy: rand(-30, 30),
+            life: rand(0.2, 0.4),
+            color: '#ecf0f1'
+          });
+        }
+      }
+      
+      // Sword storm: rapid slashes that destroy everything
+      if (G.ultType === 'swordStorm') {
+        G.swordStormTimer += dt;
+        // Create slash every 0.4 seconds (10 slashes in 4 seconds)
+        if (G.swordStormTimer >= 0.4) {
+          G.swordStormTimer = 0;
+          const pr = playerRect();
+          G.projectiles.push({
+            type: 'katanaSlash',
+            x: pr.x + pr.w - 10,
+            y: pr.y + pr.h * 0.3 + rand(-20, 20),
+            w: 80,
+            h: 60,
+            vx: 0,
+            life: 0.35,
+            slashPhase: rand(0, 3)
+          });
+          // Slash particles
+          for (let i = 0; i < 5; i++) {
+            G.particles.push({
+              x: pr.x + pr.w + rand(0, 30),
+              y: pr.y + pr.h * 0.3 + rand(-15, 15),
+              vx: rand(80, 200),
+              vy: rand(-50, 50),
+              life: rand(0.2, 0.35),
+              color: '#e74c3c'
+            });
+          }
+        }
+      }
+      
+      // Poison armor: green aura particles
+      if (G.ultType === 'poisonArmor') {
+        if (Math.random() < 0.5) {
+          const angle = Math.random() * Math.PI * 2;
+          G.particles.push({
+            x: P.x + P.w / 2 + Math.cos(angle) * rand(20, 35),
+            y: P.y - P.h / 2 + Math.sin(angle) * rand(20, 35),
+            vx: Math.cos(angle) * rand(20, 50),
+            vy: Math.sin(angle) * rand(20, 50) - 30,
+            life: rand(0.3, 0.5),
+            color: '#27ae60'
+          });
+        }
+      }
+      
+      // Ice storm: swirling ice particles
+      if (G.ultType === 'iceStorm') {
+        if (Math.random() < 0.6) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = rand(30, 60);
+          G.particles.push({
+            x: P.x + P.w / 2 + Math.cos(angle) * dist,
+            y: P.y - P.h / 2 + Math.sin(angle) * dist * 0.6,
+            vx: Math.cos(angle + Math.PI / 2) * rand(50, 100),
+            vy: Math.sin(angle + Math.PI / 2) * rand(30, 60) - 20,
+            life: rand(0.3, 0.5),
+            color: Math.random() > 0.5 ? '#67e8f9' : '#fff'
+          });
+        }
+      }
+      
+      if (G.ultTimer <= 0) {
+        G.ultActive = false;
+        G.ultType = null;
+        G.monkeyRect = null;
+        canvas.classList.remove('ult-active');
+      }
+    }
+
+    // Physics
+    if (G.ultActive && (G.ultType === 'eagleFlight' || G.ultType === 'headbutt' || G.ultType === 'poisonArmor' || G.ultType === 'paperWings')) {
+      // Eagle/headbutt/poison armor/paper wings controls the position, skip normal physics for flying ones
+      if (G.ultType === 'poisonArmor') {
+        // Poison armor still uses normal physics, just passes through enemies
+        if (!P.onGround) {
+          P.vy += G.gravity * dt;
+          P.y += P.vy * dt;
+          if (P.y >= G.groundY) {
+            P.y = G.groundY;
+            P.vy = 0;
+            P.onGround = true;
+          }
+        } else {
+          P.y = G.groundY;
+        }
+      } else if (G.ultType === 'paperWings') {
+        // Paper wings flight - smooth up/down control
+        P.y += (G.paperWingsY - P.y) * 8 * dt;
+        P.vy = 0;
+        P.onGround = false;
+      }
+    } else if (!P.onGround) {
+      P.vy += G.gravity * dt;
+      P.y += P.vy * dt;
+      if (P.y >= G.groundY) {
+        P.y = G.groundY;
+        P.vy = 0;
+        P.onGround = true;
+      }
+    } else {
+      P.y = G.groundY;
+    }
+
+    // Spawn obstacles
+    G.spawnTimer -= dt;
+    if (G.spawnTimer <= 0) {
+      spawnObstacle();
+      const speedFactor = clamp((G.speed - 280) / 320, 0, 1);
+      G.spawnTimer = rand(
+        Math.max(0.45, G.spawnMin - speedFactor * 0.15),
+        Math.max(0.75, G.spawnMax - speedFactor * 0.20)
+      );
+    }
+
+    // Update projectiles
+    const pr = playerRect();
+    for (let i = G.projectiles.length - 1; i >= 0; i--) {
+      const p = G.projectiles[i];
+      p.life -= dt;
+      
+      if (p.type === 'spear' && p.extending) {
+        p.w = Math.min(p.maxW, p.w + 400 * dt);
+      } else if (p.type === 'rainArrow') {
+        // Rain arrows fall down
+        p.y += p.vy * dt;
+        if (p.y > G.groundY) {
+          G.projectiles.splice(i, 1);
+          continue;
+        }
+      } else if (p.vx) {
+        p.x += p.vx * dt;
+        if (p.vy) p.y += p.vy * dt;
+      }
+      
+      if (p.trail) {
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 10) p.trail.shift();
+      }
+      
+      if (p.life <= 0 || p.x > WORLD_W + 50) {
+        G.projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Collision with obstacles
+      const pRect = p.type === 'spear' 
+        ? { x: p.x, y: p.y - p.h / 2, w: p.w, h: p.h }
+        : p.type === 'rainArrow'
+        ? { x: p.x - 10, y: p.y - 20, w: 20, h: 40 }
+        : { x: p.x - (p.radius || 12), y: p.y - (p.radius || 12), w: (p.radius || 12) * 2, h: (p.radius || 12) * 2 };
+      
+      for (let j = G.obstacles.length - 1; j >= 0; j--) {
+        const o = G.obstacles[j];
+        const oRect = obstacleRect(o);
+        if (rectsOverlap(pRect, oRect)) {
+          // Destroy obstacle
+          for (let k = 0; k < 12; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2 + rand(-15, 15),
+              y: o.y - o.h / 2 + rand(-15, 15),
+              vx: rand(-150, 150),
+              vy: rand(-200, -50),
+              life: rand(0.3, 0.5),
+              color: o.color || '#888'
+            });
+          }
+          G.obstacles.splice(j, 1);
+          G.score += 15;
+          
+          // Spear doesn't get destroyed, shuriken/water ball do
+          if (p.type !== 'spear') {
+            G.projectiles.splice(i, 1);
+          }
+          break;
+        }
+      }
+    }
+
+    // Update obstacles
+    for (let i = G.obstacles.length - 1; i >= 0; i--) {
+      const o = G.obstacles[i];
+      o.x -= G.speed * dt;
+
+      if (o.x < -100) {
+        G.obstacles.splice(i, 1);
+        continue;
+      }
+
+      // Collision with player
+      const oRect = obstacleRect(o);
+      const pad = o.hitPad || 0;
+      const a = { x: pr.x + 6, y: pr.y + 6, w: pr.w - 12, h: pr.h - 12 };
+      const b = { x: oRect.x + pad, y: oRect.y + pad, w: oRect.w - pad * 2, h: oRect.h - pad * 2 };
+
+      if (rectsOverlap(a, b)) {
+        // Ultimate effects
+        if (G.ultActive) {
+          if (G.ultType === 'moonlight' || G.ultType === 'iceStorm') {
+            // Destroy on contact
+            for (let k = 0; k < 15; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-180, 180),
+                vy: rand(-220, -40),
+                life: rand(0.4, 0.7),
+                color: G.ultType === 'moonlight' ? '#fff' : '#67e8f9'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 10;
+          } else if (G.ultType === 'eagleFlight') {
+            // Pass through
+            continue;
+          } else if (G.ultType === 'headbutt') {
+            // Headbutt destroys enemies on contact
+            for (let k = 0; k < 20; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-200, 200),
+                vy: rand(-250, -80),
+                life: rand(0.4, 0.7),
+                color: '#ffd700'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 20;
+            continue;
+          } else if (G.ultType === 'poisonArmor') {
+            // Poison armor passes through and poisons enemies
+            for (let k = 0; k < 15; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-150, 150),
+                vy: rand(-180, -40),
+                life: rand(0.4, 0.6),
+                color: '#27ae60'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 10;
+            continue;
+          } else if (G.ultType === 'monkeyFriend') {
+            // Monkey friend makes player invincible, but monkey handles the crushing
+            continue;
+          } else if (G.ultType === 'illusionStorm') {
+            // Shinji: Illusion storm stuns/destroys enemies
+            for (let k = 0; k < 15; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-150, 150),
+                vy: rand(-180, -40),
+                life: rand(0.4, 0.6),
+                color: '#9b59b6'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 12;
+            continue;
+          } else if (G.ultType === 'windSword') {
+            // Kazuya: Wind sword cuts all enemies
+            for (let k = 0; k < 18; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-200, 200),
+                vy: rand(-220, -60),
+                life: rand(0.4, 0.7),
+                color: '#87ceeb'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 15;
+            continue;
+          } else if (G.ultType === 'darkAura') {
+            // Togami: Dark aura crushes enemies
+            for (let k = 0; k < 20; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-180, 180),
+                vy: rand(-200, -50),
+                life: rand(0.4, 0.7),
+                color: k % 3 === 0 ? '#3498db' : '#1a1a1a'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 18;
+            continue;
+          } else if (G.ultType === 'paperWings') {
+            // Kagi: Paper wings slice through enemies
+            for (let k = 0; k < 18; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-200, 200),
+                vy: rand(-200, -50),
+                life: rand(0.4, 0.7),
+                color: k % 2 === 0 ? '#fff' : '#ddd'
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 16;
+            continue;
+          }
+        } else {
+          // Game over
+          G.gameOver = true;
+          G.running = false;
+          canvas.classList.remove('ult-active');
+          // Show leaderboard after a short delay
+          setTimeout(() => {
+            showLeaderboard(G.score);
+          }, 500);
+        }
+      }
+      
+      // Monkey friend collision - monkey crushes enemies
+      if (G.ultActive && G.ultType === 'monkeyFriend' && G.monkeyRect) {
+        const mRect = G.monkeyRect;
+        if (rectsOverlap(mRect, oRect)) {
+          // Monkey crushes the enemy
+          for (let k = 0; k < 18; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-200, 200),
+              vy: rand(-250, -80),
+              life: rand(0.4, 0.7),
+              color: '#8B4513'
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 15;
+          continue;
+        }
+      }
+      
+      // Animal friends collision - animals attack enemies
+      if (G.ultActive && G.ultType === 'animalFriends' && G.animalRects) {
+        let hit = false;
+        for (const aRect of G.animalRects) {
+          if (rectsOverlap(aRect, oRect)) {
+            hit = true;
+            break;
+          }
+        }
+        if (hit) {
+          // Animals attack the enemy with mixed particles
+          const colors = ['#D2691E', '#A0522D', '#3498db'];
+          for (let k = 0; k < 20; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-200, 200),
+              vy: rand(-250, -80),
+              life: rand(0.4, 0.7),
+              color: colors[Math.floor(Math.random() * colors.length)]
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 18;
+          continue;
+        }
+      }
+      
+      // Fire dragon collision - dragon burns enemies
+      if (G.ultActive && G.ultType === 'fireDragon' && G.dragonRect) {
+        if (rectsOverlap(G.dragonRect, oRect)) {
+          // Dragon burns the enemy with fire particles
+          for (let k = 0; k < 25; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-200, 200),
+              vy: rand(-300, -100),
+              life: rand(0.5, 0.9),
+              color: k % 3 === 0 ? '#ff0' : (k % 3 === 1 ? '#f80' : '#f00')
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 20;
+          continue;
+        }
+      }
+      
+      // Giant crow collision - crow attacks enemies
+      if (G.ultActive && G.ultType === 'giantCrow' && G.crowRect) {
+        if (rectsOverlap(G.crowRect, oRect)) {
+          // Crow attacks with feather/dark particles
+          for (let k = 0; k < 22; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-200, 200),
+              vy: rand(-280, -80),
+              life: rand(0.5, 0.8),
+              color: k % 3 === 0 ? '#3498db' : '#1a1a1a'
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 18;
+          continue;
+        }
+      }
+      
+      // Mystic lightning collision - lightning strikes enemies
+      if (G.ultActive && G.ultType === 'mysticLightning' && G.lightningRect) {
+        if (rectsOverlap(G.lightningRect, oRect)) {
+          // Lightning electrocutes enemies with purple/white particles
+          for (let k = 0; k < 25; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-250, 250),
+              vy: rand(-300, -100),
+              life: rand(0.4, 0.8),
+              color: k % 3 === 0 ? '#fff' : (k % 3 === 1 ? '#9b59b6' : '#f1c40f')
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 20;
+          continue;
+        }
+      }
+      
+      // Shadow clone collision - clone attacks enemies
+      if (G.ultActive && G.ultType === 'shadowClone' && G.cloneRect) {
+        if (rectsOverlap(G.cloneRect, oRect)) {
+          // Clone slashes with purple particles
+          for (let k = 0; k < 20; k++) {
+            G.particles.push({
+              x: o.x + o.w / 2,
+              y: o.y - o.h / 2,
+              vx: rand(-200, 200),
+              vy: rand(-250, -80),
+              life: rand(0.4, 0.7),
+              color: k % 2 === 0 ? '#8e44ad' : '#9b59b6'
+            });
+          }
+          G.obstacles.splice(i, 1);
+          G.score += 16;
+          continue;
+        }
+      }
+    }
+
+    // Random particles
+    if (Math.random() < 0.04) {
+      G.particles.push({
+        x: rand(0, WORLD_W),
+        y: rand(G.groundY + 5, G.groundY + 15),
+        vx: -rand(20, 60),
+        vy: -rand(20, 60),
+        life: rand(0.1, 0.25),
+        color: '#555'
+      });
+    }
+  }
+
+  // ===== RENDER =====
+  function render() {
+    ctx.save();
+    ctx.scale(G.scaleX, G.scaleY);
+    ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+
+    drawClouds(G.dt || 0);
+    drawGround();
+    drawParticles(G.dt || 0);
+
+    for (const o of G.obstacles) drawObstacle(o);
+    for (const p of G.projectiles) drawProjectile(p);
+    drawPlayer();
+    drawUI();
+
+    ctx.restore();
+
+    scorePill.textContent = `Skor: ${Math.floor(G.score)}`;
+  }
+
+  // ===== GAME LOOP =====
+  function gameLoop(ts) {
+    if (!G.last) G.last = ts;
+    const dt = clamp((ts - G.last) / 1000, 0, 0.033);
+    G.last = ts;
+
+    if (screens.game.classList.contains('active')) {
+      update(dt);
+      render();
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // ===== INIT =====
+  // Check for saved nickname
+  const savedNick = sessionStorage.getItem('ninja_nick');
+  if (savedNick) {
+    nickname = savedNick;
+    nickInput.value = savedNick;
+    nickBtn.disabled = false;
+  }
+})();
+</script>
+</body>
+</html>
