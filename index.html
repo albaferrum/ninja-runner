@@ -270,15 +270,16 @@
     .controls {
       width: min(560px, 100%);
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
       padding-bottom: env(safe-area-inset-bottom);
+      margin-top: -5px;
     }
 
     .ctrlBtn {
-      border-radius: 14px;
-      padding: 14px 12px;
-      font-size: 15px;
+      border-radius: 12px;
+      padding: 10px 6px;
+      font-size: 13px;
       font-weight: 800;
       color: rgba(255,255,255,.92);
       background: rgba(255,255,255,.07);
@@ -291,6 +292,70 @@
       cursor: pointer;
     }
     .ctrlBtn:active { transform: translateY(1px); background: rgba(255,255,255,.11); }
+
+    /* Mobile: Larger, more accessible buttons */
+    @media (max-width: 768px) {
+      .controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto;
+        gap: 8px;
+        padding: 12px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%);
+        z-index: 1000;
+        margin: 0;
+      }
+
+      .ctrlBtn {
+        border-radius: 16px;
+        padding: 18px 12px;
+        font-size: 16px;
+        font-weight: 800;
+        background: rgba(255,255,255,.12);
+        border: 2px solid rgba(255,255,255,.2);
+      }
+
+      /* Zıpla ve Eğil butonları daha büyük */
+      #btnJump, #btnCrouch {
+        padding: 22px 12px;
+        font-size: 18px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3));
+        border-color: rgba(139,92,246,0.5);
+      }
+
+      .hint {
+        display: none; /* Hide hint on mobile to save space */
+      }
+
+      .game-wrap {
+        padding-bottom: 140px; /* Space for fixed controls */
+      }
+    }
+
+    /* Very small screens */
+    @media (max-width: 400px) {
+      .controls {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .ctrlBtn {
+        padding: 14px 8px;
+        font-size: 14px;
+      }
+
+      #btnJump, #btnCrouch {
+        padding: 18px 8px;
+        font-size: 16px;
+      }
+    }
 
     .hint {
       width: min(560px, 100%);
@@ -810,6 +875,7 @@
         <button class="ctrlBtn" id="btnMenu">🏠 Menü</button>
         <button class="ctrlBtn" id="btnLeaderboard">🏆</button>
         <button class="ctrlBtn" id="btnFullscreen">⛶</button>
+        <button class="ctrlBtn" id="btnMusic">🔊</button>
         <button class="ctrlBtn" id="btnJump">⬆️ Zıpla</button>
         <button class="ctrlBtn" id="btnCrouch">⬇️ Eğil</button>
       </div>
@@ -819,6 +885,11 @@
       </div>
     </div>
   </div>
+
+  <!-- Background Music -->
+  <audio id="bgMusic" loop preload="auto">
+    <source src="ost/ost.mp3" type="audio/mpeg">
+  </audio>
 
 <script>
 (() => {
@@ -1413,8 +1484,14 @@
   const btnMenu = document.getElementById('btnMenu');
   const btnLeaderboard = document.getElementById('btnLeaderboard');
   const btnFullscreen = document.getElementById('btnFullscreen');
+  const btnMusic = document.getElementById('btnMusic');
   const btnJump = document.getElementById('btnJump');
   const btnCrouch = document.getElementById('btnCrouch');
+
+  // Music
+  const bgMusic = document.getElementById('bgMusic');
+  let musicPlaying = false;
+  bgMusic.volume = 0.4;
 
   const leaderboardList = document.getElementById('leaderboardList');
   const playerRankText = document.getElementById('playerRankText');
@@ -1888,6 +1965,13 @@
     }));
 
     updateSkillUI();
+    
+    // Start music when game starts
+    if (!musicPlaying) {
+      bgMusic.play().catch(() => {});
+      btnMusic.textContent = '🔊';
+      musicPlaying = true;
+    }
   }
 
   // ===== OBSTACLES =====
@@ -2725,6 +2809,21 @@
   }
 
   btnFullscreen.addEventListener('click', toggleFullscreen);
+
+  // Music toggle
+  function toggleMusic() {
+    if (musicPlaying) {
+      bgMusic.pause();
+      btnMusic.textContent = '🔇';
+      musicPlaying = false;
+    } else {
+      bgMusic.play().catch(() => {});
+      btnMusic.textContent = '🔊';
+      musicPlaying = true;
+    }
+  }
+
+  btnMusic.addEventListener('click', toggleMusic);
 
   // Fullscreen değişikliğini dinle
   document.addEventListener('fullscreenchange', () => {
