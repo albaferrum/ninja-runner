@@ -1481,6 +1481,15 @@
     bossUltiActive: false,
     lightningStrikes: [],
 
+    // Parchment/Scroll system
+    scrolls: [],
+    scrollSpawnTimer: 0,
+    lives: 1,
+    maxLives: 3,
+    scoreMultiplier: 1,
+    scoreMultiplierTimer: 0,
+    ultiDurationMultiplier: 1,
+
     scaleX: 1,
     scaleY: 1
   };
@@ -1837,6 +1846,14 @@
     G.bossUltiActive = false;
     G.lightningStrikes = [];
 
+    // Scroll/parchment reset
+    G.scrolls = [];
+    G.scrollSpawnTimer = rand(3, 6);
+    G.lives = 3;
+    G.scoreMultiplier = 1;
+    G.scoreMultiplierTimer = 0;
+    G.ultiDurationMultiplier = 1;
+
     // Adjust player size based on character
     const char = CHARACTERS[selectedChar];
     if (char.isSmall) {
@@ -1951,81 +1968,9 @@
     
     // Attack timer
     G.bossAttackTimer -= dt;
-    if (G.bossAttackTimer <= 0 && !G.bossUltiActive) {
+    if (G.bossAttackTimer <= 0) {
       bossAttack();
       G.bossAttackTimer = BOSS.attackCooldown;
-    }
-    
-    // Ultimate timer
-    G.bossUltiTimer -= dt;
-    if (G.bossUltiTimer <= 0 && !G.bossUltiActive) {
-      bossUltimate();
-      G.bossUltiTimer = BOSS.ultiCooldown;
-    }
-    
-    // Update boss ultimate
-    if (G.bossUltiActive) {
-      G.bossUltiDuration -= dt;
-      
-      // Spawn lightning strikes from spear tip
-      if (Math.random() < 0.12) {
-        // Target random X position for player to dodge
-        const targetX = rand(50, WORLD_W - 150);
-        G.lightningStrikes.push({
-          startX: boss.spearTipX || (boss.x - 240),
-          startY: boss.spearTipY || (boss.y - 60),
-          x: targetX,
-          delay: rand(0.4, 0.9),
-          active: false,
-          timer: 0,
-          struck: false,
-          fromSpear: true
-        });
-      }
-      
-      if (G.bossUltiDuration <= 0) {
-        G.bossUltiActive = false;
-        G.lightningStrikes = [];
-      }
-    }
-    
-    // Update lightning strikes
-    for (let i = G.lightningStrikes.length - 1; i >= 0; i--) {
-      const l = G.lightningStrikes[i];
-      l.delay -= dt;
-      if (l.delay <= 0 && !l.active) {
-        l.active = true;
-        l.timer = 0.4; // Lightning visible for 0.4s
-      }
-      if (l.active) {
-        l.timer -= dt;
-        
-        // Check collision with player
-        if (!l.struck) {
-          const pr = playerRect();
-          const lRect = { x: l.x - 20, y: 0, w: 40, h: G.groundY };
-          if (rectsOverlap(pr, lRect)) {
-            // Player hit by lightning
-            if (!G.ultActive || (G.ultType !== 'eagleFlight' && G.ultType !== 'moonlight')) {
-              // Game over
-              G.gameOver = true;
-              G.running = false;
-              G.bossActive = false;
-              G.boss = null;
-              G.bossProjectiles = [];
-              G.lightningStrikes = [];
-              canvas.classList.remove('ult-active');
-              setTimeout(() => showLeaderboard(G.score), 500);
-              return;
-            }
-          }
-          l.struck = true;
-        }
-        
-        if (l.timer <= 0) {
-          G.lightningStrikes.splice(i, 1);
-        }
-      }
     }
     
     // Update boss projectiles
@@ -2047,16 +1992,33 @@
       if (rectsOverlap(pr, pRect)) {
         // Player hit
         if (!G.ultActive || (G.ultType !== 'eagleFlight' && G.ultType !== 'moonlight' && G.ultType !== 'iceStorm')) {
-          // Game over
-          G.gameOver = true;
-          G.running = false;
-          G.bossActive = false;
-          G.boss = null;
-          G.bossProjectiles = [];
-          G.lightningStrikes = [];
-          canvas.classList.remove('ult-active');
-          setTimeout(() => showLeaderboard(G.score), 500);
-          return;
+          G.lives--;
+          G.bossProjectiles.splice(i, 1);
+          
+          // Hit particles
+          for (let k = 0; k < 12; k++) {
+            G.particles.push({
+              x: pr.x + pr.w/2,
+              y: pr.y + pr.h/2,
+              vx: rand(-150, 150),
+              vy: rand(-150, 50),
+              life: rand(0.3, 0.5),
+              color: '#ef4444'
+            });
+          }
+          
+          if (G.lives <= 0) {
+            // Game over
+            G.gameOver = true;
+            G.running = false;
+            G.bossActive = false;
+            G.boss = null;
+            G.bossProjectiles = [];
+            G.lightningStrikes = [];
+            canvas.classList.remove('ult-active');
+            setTimeout(() => showLeaderboard(G.score), 500);
+            return;
+          }
         } else {
           G.bossProjectiles.splice(i, 1);
         }
@@ -2108,43 +2070,30 @@
     boss.attacking = true;
     boss.attackAnim = 0.5;
     
+    // Randomly choose attack height: high (jump to dodge) or low (slide to dodge)
+    const attackLow = Math.random() < 0.35; // 35% chance for low attack
+    const attackY = attackLow ? (boss.y - 20) : (boss.y - 70);
+    
     // Electric shock wave
     G.bossProjectiles.push({
       x: boss.x,
-      y: boss.y - 60,
-      vx: -400,
+      y: attackY,
+      vx: -450,
       vy: 0,
       life: 3,
-      type: 'shockwave'
+      type: 'shockwave',
+      isLow: attackLow
     });
     
     // Particles
     for (let i = 0; i < 15; i++) {
       G.particles.push({
         x: boss.x + rand(-10, 20),
-        y: boss.y - 60 + rand(-20, 20),
+        y: attackY + rand(-20, 20),
         vx: rand(-300, -100),
         vy: rand(-50, 50),
         life: rand(0.3, 0.6),
-        color: '#67e8f9'
-      });
-    }
-  }
-
-  function bossUltimate() {
-    G.bossUltiActive = true;
-    G.bossUltiDuration = BOSS.ultiDuration;
-    G.lightningStrikes = [];
-    
-    // Warning particles
-    for (let i = 0; i < 30; i++) {
-      G.particles.push({
-        x: rand(50, WORLD_W - 50),
-        y: rand(0, 100),
-        vx: rand(-20, 20),
-        vy: rand(50, 150),
-        life: rand(0.5, 1),
-        color: '#fbbf24'
+        color: attackLow ? '#fbbf24' : '#67e8f9'
       });
     }
   }
@@ -2169,6 +2118,189 @@
         color: ['#fbbf24', '#f59e0b', '#ef4444', '#ec4899'][Math.floor(rand(0, 4))]
       });
     }
+  }
+
+  // ===== SCROLL/PARCHMENT SYSTEM =====
+  const SCROLL_TYPES = [
+    { type: 'blue', color: '#3b82f6', effect: 'life', label: '❤️' },
+    { type: 'red', color: '#ef4444', effect: 'ultiBoost', label: '⚡' },
+    { type: 'yellow', color: '#eab308', effect: 'scoreBoost', label: '💰' }
+  ];
+
+  function spawnScroll() {
+    const scrollType = SCROLL_TYPES[Math.floor(Math.random() * SCROLL_TYPES.length)];
+    G.scrolls.push({
+      x: WORLD_W + 50,
+      y: G.groundY - rand(80, 200),
+      w: 35,
+      h: 45,
+      type: scrollType.type,
+      color: scrollType.color,
+      effect: scrollType.effect,
+      label: scrollType.label,
+      bobPhase: rand(0, Math.PI * 2)
+    });
+  }
+
+  function updateScrolls(dt) {
+    // Spawn timer
+    G.scrollSpawnTimer -= dt;
+    if (G.scrollSpawnTimer <= 0 && !G.bossActive) {
+      if (Math.random() < 0.25) { // 25% chance to spawn
+        spawnScroll();
+      }
+      G.scrollSpawnTimer = rand(4, 8); // Every 4-8 seconds
+    }
+
+    // Update score multiplier timer
+    if (G.scoreMultiplierTimer > 0) {
+      G.scoreMultiplierTimer -= dt;
+      if (G.scoreMultiplierTimer <= 0) {
+        G.scoreMultiplier = 1;
+      }
+    }
+
+    // Move and check scrolls
+    const pr = playerRect();
+    for (let i = G.scrolls.length - 1; i >= 0; i--) {
+      const s = G.scrolls[i];
+      s.x -= G.speed * dt;
+      s.bobPhase += dt * 4;
+
+      // Remove if off screen
+      if (s.x < -50) {
+        G.scrolls.splice(i, 1);
+        continue;
+      }
+
+      // Collision with player
+      const sRect = { x: s.x - s.w/2, y: s.y - s.h/2, w: s.w, h: s.h };
+      if (rectsOverlap(pr, sRect)) {
+        // Collect scroll
+        G.score += 100 * G.scoreMultiplier;
+
+        // Apply effect
+        if (s.effect === 'life') {
+          if (G.lives < G.maxLives) {
+            G.lives++;
+          }
+        } else if (s.effect === 'ultiBoost') {
+          G.ultiDurationMultiplier = 2;
+        } else if (s.effect === 'scoreBoost') {
+          G.scoreMultiplier = 3;
+          G.scoreMultiplierTimer = 5;
+        }
+
+        // Collect particles
+        for (let k = 0; k < 15; k++) {
+          G.particles.push({
+            x: s.x,
+            y: s.y,
+            vx: rand(-150, 150),
+            vy: rand(-200, -50),
+            life: rand(0.3, 0.6),
+            color: s.color
+          });
+        }
+
+        G.scrolls.splice(i, 1);
+      }
+    }
+  }
+
+  function drawScrolls() {
+    for (const s of G.scrolls) {
+      const bobY = Math.sin(s.bobPhase) * 5;
+      const x = s.x;
+      const y = s.y + bobY;
+
+      ctx.save();
+
+      // Glow effect
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = 15;
+
+      // Scroll/parchment body
+      ctx.fillStyle = '#f5e6d3';
+      ctx.beginPath();
+      ctx.roundRect(x - s.w/2, y - s.h/2, s.w, s.h, 5);
+      ctx.fill();
+
+      // Scroll top roll
+      ctx.fillStyle = '#d4b896';
+      ctx.beginPath();
+      ctx.ellipse(x, y - s.h/2, s.w/2 + 3, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Scroll bottom roll
+      ctx.beginPath();
+      ctx.ellipse(x, y + s.h/2, s.w/2 + 3, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Colored seal/ribbon
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Icon
+      ctx.shadowBlur = 0;
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s.label, x, y + 1);
+
+      ctx.restore();
+    }
+  }
+
+  function drawLivesUI() {
+    // Lives bar at top right
+    ctx.save();
+    
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.roundRect(WORLD_W - 110, 10, 100, 30, 8);
+    ctx.fill();
+
+    // Hearts
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < G.maxLives; i++) {
+      if (i < G.lives) {
+        ctx.fillStyle = '#ef4444';
+        ctx.fillText('❤️', WORLD_W - 100 + i * 30, 25);
+      } else {
+        ctx.fillStyle = '#666';
+        ctx.fillText('🖤', WORLD_W - 100 + i * 30, 25);
+      }
+    }
+
+    // Score multiplier indicator
+    if (G.scoreMultiplier > 1) {
+      ctx.fillStyle = '#eab308';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`x${G.scoreMultiplier} PUAN!`, WORLD_W - 15, 55);
+      
+      // Timer bar
+      ctx.fillStyle = 'rgba(234,179,8,0.3)';
+      ctx.fillRect(WORLD_W - 110, 65, 100, 4);
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(WORLD_W - 110, 65, 100 * (G.scoreMultiplierTimer / 5), 4);
+    }
+
+    // Ulti boost indicator
+    if (G.ultiDurationMultiplier > 1) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('⚡ ULTİ 2X', WORLD_W - 15, G.scoreMultiplier > 1 ? 82 : 55);
+    }
+
+    ctx.restore();
   }
 
   // ===== SKILLS =====
@@ -2394,8 +2526,11 @@
 
     const char = CHARACTERS[selectedChar];
     G.ultActive = true;
-    G.ultTimer = char.skillF.duration;
+    G.ultTimer = char.skillF.duration * G.ultiDurationMultiplier;
     G.ultType = char.skillF.action;
+    
+    // Reset ulti multiplier after use
+    G.ultiDurationMultiplier = 1;
 
     // Eagle flight: start rising
     if (char.skillF.action === 'eagleFlight') {
@@ -5555,7 +5690,7 @@
     if (!G.running) return;
 
     G.speed = Math.min(G.speedMax, G.speed + G.speedAccel * dt);
-    G.score += dt * (G.speed / 100);
+    G.score += dt * (G.speed / 100) * G.scoreMultiplier;
     G.groundScroll += G.speed * dt;
 
     // Cooldowns
@@ -5747,6 +5882,9 @@
     if (G.bossActive && G.boss) {
       updateBoss(dt);
     }
+
+    // Update scrolls/parchments
+    updateScrolls(dt);
 
     // Update projectiles
     const pr = playerRect();
@@ -5943,14 +6081,32 @@
             continue;
           }
         } else {
-          // Game over
-          G.gameOver = true;
-          G.running = false;
-          canvas.classList.remove('ult-active');
-          // Show leaderboard after a short delay
-          setTimeout(() => {
-            showLeaderboard(G.score);
-          }, 500);
+          // Player hit - check lives
+          G.lives--;
+          
+          if (G.lives <= 0) {
+            // Game over
+            G.gameOver = true;
+            G.running = false;
+            canvas.classList.remove('ult-active');
+            // Show leaderboard after a short delay
+            setTimeout(() => {
+              showLeaderboard(G.score);
+            }, 500);
+          } else {
+            // Lost a life but survived - destroy obstacle and brief invincibility effect
+            for (let k = 0; k < 15; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-200, 200),
+                vy: rand(-200, -50),
+                life: rand(0.4, 0.7),
+                color: '#ef4444'
+              });
+            }
+            G.obstacles.splice(i, 1);
+          }
         }
       }
       
@@ -6110,6 +6266,9 @@
     for (const o of G.obstacles) drawObstacle(o);
     for (const p of G.projectiles) drawProjectile(p);
     
+    // Draw scrolls/parchments
+    drawScrolls();
+    
     // Draw boss
     if (G.bossActive && G.boss) {
       drawBoss();
@@ -6117,6 +6276,9 @@
     
     drawPlayer();
     drawUI();
+    
+    // Draw lives UI
+    drawLivesUI();
     
     // Draw boss HP bar
     if (G.bossActive && G.boss) {
@@ -6225,28 +6387,42 @@
     ctx.quadraticCurveTo(x + w/2 + 25, headY + 5, x + w/2 + 20, headY - 5);
     ctx.stroke();
     
-    // Red spiky hair
+    // Red medium-long hair
     ctx.fillStyle = '#dc2626';
-    // Main hair
+    // Main hair - flowing style
     ctx.beginPath();
-    ctx.moveTo(x + w/2 - 25, headY + 5);
-    ctx.lineTo(x + w/2 - 20, headY - 25);
-    ctx.lineTo(x + w/2 - 10, headY - 5);
-    ctx.lineTo(x + w/2 - 5, headY - 35);
-    ctx.lineTo(x + w/2 + 5, headY - 10);
-    ctx.lineTo(x + w/2 + 10, headY - 30);
-    ctx.lineTo(x + w/2 + 18, headY - 8);
-    ctx.lineTo(x + w/2 + 25, headY - 20);
-    ctx.lineTo(x + w/2 + 28, headY + 5);
+    ctx.moveTo(x + w/2 - 28, headY + 5);
+    ctx.quadraticCurveTo(x + w/2 - 30, headY - 15, x + w/2 - 22, headY - 25);
+    ctx.quadraticCurveTo(x + w/2 - 10, headY - 32, x + w/2, headY - 28);
+    ctx.quadraticCurveTo(x + w/2 + 10, headY - 32, x + w/2 + 22, headY - 25);
+    ctx.quadraticCurveTo(x + w/2 + 30, headY - 15, x + w/2 + 28, headY + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Hair strands flowing down (left side)
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 28, headY + 5);
+    ctx.quadraticCurveTo(x + w/2 - 35, headY + 25, x + w/2 - 30, headY + 45);
+    ctx.quadraticCurveTo(x + w/2 - 25, headY + 50, x + w/2 - 20, headY + 40);
+    ctx.quadraticCurveTo(x + w/2 - 22, headY + 20, x + w/2 - 20, headY + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Hair strands flowing down (right side)
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 + 28, headY + 5);
+    ctx.quadraticCurveTo(x + w/2 + 35, headY + 25, x + w/2 + 30, headY + 45);
+    ctx.quadraticCurveTo(x + w/2 + 25, headY + 50, x + w/2 + 20, headY + 40);
+    ctx.quadraticCurveTo(x + w/2 + 22, headY + 20, x + w/2 + 20, headY + 5);
     ctx.closePath();
     ctx.fill();
     
     // Hair shine
     ctx.fillStyle = '#f87171';
     ctx.beginPath();
-    ctx.moveTo(x + w/2 - 8, headY - 5);
-    ctx.lineTo(x + w/2 - 3, headY - 20);
-    ctx.lineTo(x + w/2 + 2, headY - 8);
+    ctx.moveTo(x + w/2 - 10, headY - 10);
+    ctx.quadraticCurveTo(x + w/2 - 5, headY - 22, x + w/2 + 5, headY - 10);
+    ctx.quadraticCurveTo(x + w/2, headY - 15, x + w/2 - 10, headY - 10);
     ctx.closePath();
     ctx.fill();
     
@@ -6359,77 +6535,19 @@
     for (const p of G.bossProjectiles) {
       drawBossProjectile(p);
     }
-    
-    // Draw lightning strikes from spear
-    for (const l of G.lightningStrikes) {
-      const spearX = G.boss ? (G.boss.spearTipX || G.boss.x - 240) : l.startX;
-      const spearY = G.boss ? (G.boss.spearTipY || G.boss.y - 60) : l.startY;
-      
-      if (l.delay <= 0.5 && !l.active) {
-        // Warning indicator on ground
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
-        ctx.fillRect(l.x - 30, G.groundY - 20, 60, 25);
-        
-        // Warning line from spear
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([10, 10]);
-        ctx.beginPath();
-        ctx.moveTo(spearX, spearY);
-        ctx.lineTo(l.x, G.groundY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-      if (l.active) {
-        // Lightning bolt from spear tip to ground
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 5;
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 25;
-        ctx.beginPath();
-        ctx.moveTo(spearX, spearY);
-        
-        // Zigzag from spear to target
-        const dx = l.x - spearX;
-        const dy = G.groundY - spearY;
-        const segments = 6;
-        for (let i = 1; i <= segments; i++) {
-          const t = i / segments;
-          const offsetX = (i % 2 === 0) ? 20 : -20;
-          ctx.lineTo(spearX + dx * t + offsetX, spearY + dy * t);
-        }
-        ctx.stroke();
-        
-        // Inner bright line
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(spearX, spearY);
-        for (let i = 1; i <= segments; i++) {
-          const t = i / segments;
-          const offsetX = (i % 2 === 0) ? 12 : -12;
-          ctx.lineTo(spearX + dx * t + offsetX, spearY + dy * t);
-        }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        
-        // Ground impact
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
-        ctx.beginPath();
-        ctx.ellipse(l.x, G.groundY, 30, 10, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
   }
 
   function drawBossProjectile(p) {
     ctx.save();
     
     if (p.type === 'shockwave') {
-      // Electric shockwave
-      ctx.strokeStyle = '#67e8f9';
+      // Electric shockwave - different color for low attacks
+      const mainColor = p.isLow ? '#fbbf24' : '#67e8f9';
+      const sparkColor = p.isLow ? '#fde68a' : '#a5f3fc';
+      
+      ctx.strokeStyle = mainColor;
       ctx.lineWidth = 4;
-      ctx.shadowColor = '#67e8f9';
+      ctx.shadowColor = mainColor;
       ctx.shadowBlur = 15;
       
       // Main wave
@@ -6447,7 +6565,7 @@
       ctx.fill();
       
       // Electric sparks (deterministic pattern)
-      ctx.strokeStyle = '#a5f3fc';
+      ctx.strokeStyle = sparkColor;
       ctx.lineWidth = 2;
       for (let i = 0; i < 4; i++) {
         const sparkY = (i % 2 === 0) ? 15 : -15;
@@ -6492,17 +6610,6 @@
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 10px sans-serif';
     ctx.fillText(`${Math.ceil(boss.hp)} / ${boss.maxHp}`, WORLD_W / 2, 52);
-    
-    // Ultimate warning
-    if (G.bossUltiActive) {
-      ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
-      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
-      
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚡ RIARU - ŞIMŞEK YAĞMURU ⚡', WORLD_W / 2, WORLD_H / 2 - 100);
-    }
   }
 
   // ===== GAME LOOP =====
