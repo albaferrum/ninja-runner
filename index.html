@@ -857,14 +857,14 @@
       skillX: {
         name: 'Shuriken',
         icon: '⭐',
-        cooldown: 3,
+        cooldown: 2,
         action: 'shuriken'
       },
       skillF: {
         name: 'Kartal Uçuşu',
         icon: '🦅',
         cooldown: 20,
-        duration: 4,
+        duration: 5,
         action: 'eagleFlight'
       }
     },
@@ -1471,8 +1471,30 @@
     // Monkey friend state
     monkeyRect: null,
 
+    // Boss state
+    bossActive: false,
+    bossDefeated: false,
+    boss: null,
+    bossProjectiles: [],
+    bossAttackTimer: 0,
+    bossUltiTimer: 0,
+    bossUltiActive: false,
+    lightningStrikes: [],
+
     scaleX: 1,
     scaleY: 1
+  };
+
+  // ===== BOSS DEFINITION =====
+  const BOSS = {
+    name: 'Raijin',
+    maxHp: 100,
+    width: 80,
+    height: 120,
+    x: 400,
+    attackCooldown: 2.5,
+    ultiCooldown: 12,
+    ultiDuration: 3
   };
 
   // ===== PLAYER =====
@@ -1805,6 +1827,16 @@
     G.headbuttY = G.groundY - 25;
     G.swordStormTimer = 0;
 
+    // Boss reset
+    G.bossActive = false;
+    G.bossDefeated = false;
+    G.boss = null;
+    G.bossProjectiles = [];
+    G.bossAttackTimer = 0;
+    G.bossUltiTimer = 0;
+    G.bossUltiActive = false;
+    G.lightningStrikes = [];
+
     // Adjust player size based on character
     const char = CHARACTERS[selectedChar];
     if (char.isSmall) {
@@ -1874,6 +1906,269 @@
   function playerRect() { return { x: P.x, y: P.y - P.h, w: P.w, h: P.h }; }
   function rectsOverlap(a, b) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  // ===== BOSS SYSTEM =====
+  function spawnBoss() {
+    G.bossActive = true;
+    G.boss = {
+      hp: BOSS.maxHp,
+      maxHp: BOSS.maxHp,
+      x: WORLD_W + 100,
+      targetX: WORLD_W - BOSS.width - 30,
+      y: G.groundY,
+      w: BOSS.width,
+      h: BOSS.height,
+      phase: 0, // Animation phase
+      attacking: false,
+      attackAnim: 0
+    };
+    G.bossAttackTimer = 2; // First attack after 2 seconds
+    G.bossUltiTimer = BOSS.ultiCooldown;
+    G.bossProjectiles = [];
+    G.lightningStrikes = [];
+    G.obstacles = []; // Clear regular enemies
+    G.speed = 0; // Stop scrolling during boss fight
+  }
+
+  function updateBoss(dt) {
+    const boss = G.boss;
+    
+    // Move boss into position
+    if (boss.x > boss.targetX) {
+      boss.x -= 150 * dt;
+      if (boss.x < boss.targetX) boss.x = boss.targetX;
+    }
+    
+    // Animation phase
+    boss.phase += dt * 3;
+    
+    // Attack animation timer
+    if (boss.attacking) {
+      boss.attackAnim -= dt;
+      if (boss.attackAnim <= 0) boss.attacking = false;
+    }
+    
+    // Attack timer
+    G.bossAttackTimer -= dt;
+    if (G.bossAttackTimer <= 0 && !G.bossUltiActive) {
+      bossAttack();
+      G.bossAttackTimer = BOSS.attackCooldown;
+    }
+    
+    // Ultimate timer
+    G.bossUltiTimer -= dt;
+    if (G.bossUltiTimer <= 0 && !G.bossUltiActive) {
+      bossUltimate();
+      G.bossUltiTimer = BOSS.ultiCooldown;
+    }
+    
+    // Update boss ultimate
+    if (G.bossUltiActive) {
+      G.bossUltiDuration -= dt;
+      
+      // Spawn lightning strikes from spear tip
+      if (Math.random() < 0.12) {
+        // Target random X position for player to dodge
+        const targetX = rand(50, WORLD_W - 150);
+        G.lightningStrikes.push({
+          startX: boss.spearTipX || (boss.x - 240),
+          startY: boss.spearTipY || (boss.y - 60),
+          x: targetX,
+          delay: rand(0.4, 0.9),
+          active: false,
+          timer: 0,
+          struck: false,
+          fromSpear: true
+        });
+      }
+      
+      if (G.bossUltiDuration <= 0) {
+        G.bossUltiActive = false;
+        G.lightningStrikes = [];
+      }
+    }
+    
+    // Update lightning strikes
+    for (let i = G.lightningStrikes.length - 1; i >= 0; i--) {
+      const l = G.lightningStrikes[i];
+      l.delay -= dt;
+      if (l.delay <= 0 && !l.active) {
+        l.active = true;
+        l.timer = 0.4; // Lightning visible for 0.4s
+      }
+      if (l.active) {
+        l.timer -= dt;
+        
+        // Check collision with player
+        if (!l.struck) {
+          const pr = playerRect();
+          const lRect = { x: l.x - 20, y: 0, w: 40, h: G.groundY };
+          if (rectsOverlap(pr, lRect)) {
+            // Player hit by lightning
+            if (!G.ultActive || (G.ultType !== 'eagleFlight' && G.ultType !== 'moonlight')) {
+              // Game over
+              G.gameOver = true;
+              G.running = false;
+              G.bossActive = false;
+              G.boss = null;
+              G.bossProjectiles = [];
+              G.lightningStrikes = [];
+              canvas.classList.remove('ult-active');
+              setTimeout(() => showLeaderboard(G.score), 500);
+              return;
+            }
+          }
+          l.struck = true;
+        }
+        
+        if (l.timer <= 0) {
+          G.lightningStrikes.splice(i, 1);
+        }
+      }
+    }
+    
+    // Update boss projectiles
+    for (let i = G.bossProjectiles.length - 1; i >= 0; i--) {
+      const p = G.bossProjectiles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      
+      // Remove if off screen or expired
+      if (p.x < -50 || p.life <= 0) {
+        G.bossProjectiles.splice(i, 1);
+        continue;
+      }
+      
+      // Collision with player
+      const pr = playerRect();
+      const pRect = { x: p.x - 20, y: p.y - 10, w: 80, h: 20 };
+      if (rectsOverlap(pr, pRect)) {
+        // Player hit
+        if (!G.ultActive || (G.ultType !== 'eagleFlight' && G.ultType !== 'moonlight' && G.ultType !== 'iceStorm')) {
+          // Game over
+          G.gameOver = true;
+          G.running = false;
+          G.bossActive = false;
+          G.boss = null;
+          G.bossProjectiles = [];
+          G.lightningStrikes = [];
+          canvas.classList.remove('ult-active');
+          setTimeout(() => showLeaderboard(G.score), 500);
+          return;
+        } else {
+          G.bossProjectiles.splice(i, 1);
+        }
+      }
+    }
+    
+    // Check player projectiles hitting boss
+    for (let i = G.projectiles.length - 1; i >= 0; i--) {
+      const p = G.projectiles[i];
+      const pRect = p.type === 'spear' 
+        ? { x: p.x, y: p.y - p.h / 2, w: p.w, h: p.h }
+        : { x: p.x - 15, y: p.y - 15, w: 30, h: 30 };
+      
+      const bossRect = { x: boss.x, y: boss.y - boss.h, w: boss.w, h: boss.h };
+      
+      if (rectsOverlap(pRect, bossRect)) {
+        // Damage boss
+        const damage = p.type === 'spear' ? 8 : 5;
+        boss.hp -= damage;
+        
+        // Hit particles
+        for (let k = 0; k < 8; k++) {
+          G.particles.push({
+            x: boss.x + rand(0, boss.w),
+            y: boss.y - boss.h / 2 + rand(-20, 20),
+            vx: rand(-150, -50),
+            vy: rand(-100, 100),
+            life: rand(0.3, 0.5),
+            color: '#ffeb3b'
+          });
+        }
+        
+        // Remove projectile (except spear)
+        if (p.type !== 'spear') {
+          G.projectiles.splice(i, 1);
+        }
+        
+        // Check if boss defeated
+        if (boss.hp <= 0) {
+          defeatBoss();
+          return;
+        }
+      }
+    }
+  }
+
+  function bossAttack() {
+    const boss = G.boss;
+    boss.attacking = true;
+    boss.attackAnim = 0.5;
+    
+    // Electric shock wave
+    G.bossProjectiles.push({
+      x: boss.x,
+      y: boss.y - 60,
+      vx: -400,
+      vy: 0,
+      life: 3,
+      type: 'shockwave'
+    });
+    
+    // Particles
+    for (let i = 0; i < 15; i++) {
+      G.particles.push({
+        x: boss.x + rand(-10, 20),
+        y: boss.y - 60 + rand(-20, 20),
+        vx: rand(-300, -100),
+        vy: rand(-50, 50),
+        life: rand(0.3, 0.6),
+        color: '#67e8f9'
+      });
+    }
+  }
+
+  function bossUltimate() {
+    G.bossUltiActive = true;
+    G.bossUltiDuration = BOSS.ultiDuration;
+    G.lightningStrikes = [];
+    
+    // Warning particles
+    for (let i = 0; i < 30; i++) {
+      G.particles.push({
+        x: rand(50, WORLD_W - 50),
+        y: rand(0, 100),
+        vx: rand(-20, 20),
+        vy: rand(50, 150),
+        life: rand(0.5, 1),
+        color: '#fbbf24'
+      });
+    }
+  }
+
+  function defeatBoss() {
+    G.bossActive = false;
+    G.bossDefeated = true;
+    G.boss = null;
+    G.bossProjectiles = [];
+    G.lightningStrikes = [];
+    G.speed = 280; // Resume game
+    G.score += 200; // Bonus for defeating boss
+    
+    // Victory particles
+    for (let i = 0; i < 50; i++) {
+      G.particles.push({
+        x: WORLD_W - 100 + rand(-50, 50),
+        y: G.groundY - 60 + rand(-50, 50),
+        vx: rand(-200, 200),
+        vy: rand(-300, -100),
+        life: rand(0.5, 1.2),
+        color: ['#fbbf24', '#f59e0b', '#ef4444', '#ec4899'][Math.floor(rand(0, 4))]
+      });
+    }
   }
 
   // ===== SKILLS =====
@@ -5430,15 +5725,27 @@
       P.y = G.groundY;
     }
 
-    // Spawn obstacles
-    G.spawnTimer -= dt;
-    if (G.spawnTimer <= 0) {
-      spawnObstacle();
-      const speedFactor = clamp((G.speed - 280) / 320, 0, 1);
-      G.spawnTimer = rand(
-        Math.max(0.45, G.spawnMin - speedFactor * 0.15),
-        Math.max(0.75, G.spawnMax - speedFactor * 0.20)
-      );
+    // Spawn obstacles (only when boss is not active)
+    if (!G.bossActive) {
+      G.spawnTimer -= dt;
+      if (G.spawnTimer <= 0) {
+        spawnObstacle();
+        const speedFactor = clamp((G.speed - 280) / 320, 0, 1);
+        G.spawnTimer = rand(
+          Math.max(0.45, G.spawnMin - speedFactor * 0.15),
+          Math.max(0.75, G.spawnMax - speedFactor * 0.20)
+        );
+      }
+    }
+
+    // Boss spawn at 500 points
+    if (!G.bossActive && !G.bossDefeated && G.score >= 500) {
+      spawnBoss();
+    }
+
+    // Update boss
+    if (G.bossActive && G.boss) {
+      updateBoss(dt);
     }
 
     // Update projectiles
@@ -5802,12 +6109,400 @@
 
     for (const o of G.obstacles) drawObstacle(o);
     for (const p of G.projectiles) drawProjectile(p);
+    
+    // Draw boss
+    if (G.bossActive && G.boss) {
+      drawBoss();
+    }
+    
     drawPlayer();
     drawUI();
+    
+    // Draw boss HP bar
+    if (G.bossActive && G.boss) {
+      drawBossUI();
+    }
 
     ctx.restore();
 
     scorePill.textContent = `Skor: ${Math.floor(G.score)}`;
+  }
+
+  // ===== BOSS DRAWING =====
+  function drawBoss() {
+    const boss = G.boss;
+    const x = boss.x;
+    const y = boss.y;
+    const w = boss.w;
+    const h = boss.h;
+    
+    ctx.save();
+    
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y + 5, w/2 + 10, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Legs (armored boots)
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(x + 15, y - 35, 18, 35);
+    ctx.fillRect(x + w - 33, y - 35, 18, 35);
+    
+    // Boot details
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 12, y - 10, 24, 12);
+    ctx.fillRect(x + w - 36, y - 10, 24, 12);
+    
+    // Body (heavy armor)
+    ctx.fillStyle = '#5c5c5c';
+    ctx.fillRect(x + 8, y - 85, w - 16, 55);
+    
+    // Armor plates
+    ctx.fillStyle = '#6b6b6b';
+    ctx.fillRect(x + 5, y - 80, 12, 45);
+    ctx.fillRect(x + w - 17, y - 80, 12, 45);
+    
+    // Chest emblem (lightning symbol)
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 8, y - 75);
+    ctx.lineTo(x + w/2 + 2, y - 75);
+    ctx.lineTo(x + w/2 - 3, y - 60);
+    ctx.lineTo(x + w/2 + 8, y - 60);
+    ctx.lineTo(x + w/2 - 5, y - 40);
+    ctx.lineTo(x + w/2, y - 55);
+    ctx.lineTo(x + w/2 - 10, y - 55);
+    ctx.fill();
+    
+    // Shoulders (big armor plates)
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath();
+    ctx.ellipse(x - 5, y - 80, 18, 12, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + w + 5, y - 80, 18, 12, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Head
+    const headY = y - h + 20;
+    ctx.fillStyle = '#d4a574'; // Skin
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, headY + 15, 22, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // One eye (right eye missing - scar)
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2 - 8, headY + 12, 4, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eye glow
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2 - 8, headY + 11, 2, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Scar over right eye
+    ctx.strokeStyle = '#8b5a5a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 + 3, headY + 2);
+    ctx.lineTo(x + w/2 + 12, headY + 22);
+    ctx.stroke();
+    
+    // Eyepatch
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2 + 8, headY + 12, 7, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eyepatch strap
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 + 14, headY + 10);
+    ctx.quadraticCurveTo(x + w/2 + 25, headY + 5, x + w/2 + 20, headY - 5);
+    ctx.stroke();
+    
+    // Red spiky hair
+    ctx.fillStyle = '#dc2626';
+    // Main hair
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 25, headY + 5);
+    ctx.lineTo(x + w/2 - 20, headY - 25);
+    ctx.lineTo(x + w/2 - 10, headY - 5);
+    ctx.lineTo(x + w/2 - 5, headY - 35);
+    ctx.lineTo(x + w/2 + 5, headY - 10);
+    ctx.lineTo(x + w/2 + 10, headY - 30);
+    ctx.lineTo(x + w/2 + 18, headY - 8);
+    ctx.lineTo(x + w/2 + 25, headY - 20);
+    ctx.lineTo(x + w/2 + 28, headY + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Hair shine
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 8, headY - 5);
+    ctx.lineTo(x + w/2 - 3, headY - 20);
+    ctx.lineTo(x + w/2 + 2, headY - 8);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Mouth (angry expression)
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 10, headY + 28);
+    ctx.lineTo(x + w/2 + 10, headY + 28);
+    ctx.stroke();
+    
+    // Spear (electric)
+    const spearBob = Math.sin(boss.phase) * 2;
+    const spearX = x - 80; // Spear extends to the left
+    const spearY = y - 60 + spearBob;
+    
+    // Store spear tip position for lightning
+    boss.spearTipX = spearX - 30;
+    boss.spearTipY = spearY;
+    
+    // Spear shaft (horizontal)
+    ctx.fillStyle = '#5c4033';
+    ctx.save();
+    ctx.translate(x + 10, spearY);
+    ctx.fillRect(-100, -4, 110, 8);
+    
+    // Shaft decoration rings
+    ctx.fillStyle = '#8B7355';
+    ctx.fillRect(-80, -5, 5, 10);
+    ctx.fillRect(-50, -5, 5, 10);
+    ctx.restore();
+    
+    // Spear blade (triangular blade)
+    ctx.fillStyle = '#c0c0c0';
+    ctx.beginPath();
+    ctx.moveTo(spearX - 30, spearY); // Tip
+    ctx.lineTo(spearX + 10, spearY - 12); // Top edge
+    ctx.lineTo(spearX + 15, spearY - 10); // Top notch
+    ctx.lineTo(spearX + 10, spearY); // Center back
+    ctx.lineTo(spearX + 15, spearY + 10); // Bottom notch
+    ctx.lineTo(spearX + 10, spearY + 12); // Bottom edge
+    ctx.closePath();
+    ctx.fill();
+    
+    // Blade edge highlight
+    ctx.fillStyle = '#e8e8e8';
+    ctx.beginPath();
+    ctx.moveTo(spearX - 30, spearY);
+    ctx.lineTo(spearX + 5, spearY - 9);
+    ctx.lineTo(spearX + 5, spearY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Blade edge (sharp)
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(spearX - 30, spearY);
+    ctx.lineTo(spearX + 10, spearY - 12);
+    ctx.stroke();
+    
+    // Electric effect on blade
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#67e8f9';
+    ctx.shadowBlur = 10;
+    const sparkPhase = Math.floor(boss.phase * 5) % 3;
+    
+    // Lightning arcs on blade
+    for (let i = 0; i < 2; i++) {
+      const arcX = spearX - 15 + i * 12;
+      const sparkOffset = ((i + sparkPhase) % 2 === 0) ? 6 : -6;
+      ctx.beginPath();
+      ctx.moveTo(arcX, spearY - 5);
+      ctx.lineTo(arcX + sparkOffset, spearY);
+      ctx.lineTo(arcX, spearY + 5);
+      ctx.stroke();
+    }
+    
+    // Glowing tip
+    ctx.fillStyle = '#fbbf24';
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(spearX - 27, spearY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Attack animation
+    if (boss.attacking) {
+      // Electric burst
+      ctx.strokeStyle = '#67e8f9';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#67e8f9';
+      ctx.shadowBlur = 15;
+      for (let i = 0; i < 5; i++) {
+        const offsetY = ((i * 17) % 40) - 20;
+        const offsetX = 30 + (i * 13) % 30;
+        ctx.beginPath();
+        ctx.moveTo(x - 20, y - 60 + offsetY);
+        ctx.lineTo(x - 60 - offsetX, y - 60 + offsetY * 1.5);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+    
+    ctx.restore();
+    
+    // Draw boss projectiles
+    for (const p of G.bossProjectiles) {
+      drawBossProjectile(p);
+    }
+    
+    // Draw lightning strikes from spear
+    for (const l of G.lightningStrikes) {
+      const spearX = G.boss ? (G.boss.spearTipX || G.boss.x - 240) : l.startX;
+      const spearY = G.boss ? (G.boss.spearTipY || G.boss.y - 60) : l.startY;
+      
+      if (l.delay <= 0.5 && !l.active) {
+        // Warning indicator on ground
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+        ctx.fillRect(l.x - 30, G.groundY - 20, 60, 25);
+        
+        // Warning line from spear
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(spearX, spearY);
+        ctx.lineTo(l.x, G.groundY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (l.active) {
+        // Lightning bolt from spear tip to ground
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 5;
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.moveTo(spearX, spearY);
+        
+        // Zigzag from spear to target
+        const dx = l.x - spearX;
+        const dy = G.groundY - spearY;
+        const segments = 6;
+        for (let i = 1; i <= segments; i++) {
+          const t = i / segments;
+          const offsetX = (i % 2 === 0) ? 20 : -20;
+          ctx.lineTo(spearX + dx * t + offsetX, spearY + dy * t);
+        }
+        ctx.stroke();
+        
+        // Inner bright line
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(spearX, spearY);
+        for (let i = 1; i <= segments; i++) {
+          const t = i / segments;
+          const offsetX = (i % 2 === 0) ? 12 : -12;
+          ctx.lineTo(spearX + dx * t + offsetX, spearY + dy * t);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        // Ground impact
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(l.x, G.groundY, 30, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawBossProjectile(p) {
+    ctx.save();
+    
+    if (p.type === 'shockwave') {
+      // Electric shockwave
+      ctx.strokeStyle = '#67e8f9';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#67e8f9';
+      ctx.shadowBlur = 15;
+      
+      // Main wave
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - 15);
+      for (let i = 0; i < 80; i += 10) {
+        ctx.lineTo(p.x - i, p.y + (i % 20 === 0 ? -15 : 15));
+      }
+      ctx.stroke();
+      
+      // Core
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, 12, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Electric sparks (deterministic pattern)
+      ctx.strokeStyle = '#a5f3fc';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        const sparkY = (i % 2 === 0) ? 15 : -15;
+        const sparkX = (i % 2 === 0) ? 8 : -8;
+        ctx.beginPath();
+        ctx.moveTo(p.x - i * 15, p.y);
+        ctx.lineTo(p.x - i * 15 + sparkX, p.y + sparkY);
+        ctx.stroke();
+      }
+      
+      ctx.shadowBlur = 0;
+    }
+    
+    ctx.restore();
+  }
+
+  function drawBossUI() {
+    const boss = G.boss;
+    
+    // Boss name
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡ RIARU ⚡', WORLD_W / 2, 30);
+    
+    // HP bar background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(WORLD_W / 2 - 100, 40, 200, 16);
+    
+    // HP bar
+    const hpPercent = boss.hp / boss.maxHp;
+    const hpColor = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#eab308' : '#ef4444';
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(WORLD_W / 2 - 98, 42, 196 * hpPercent, 12);
+    
+    // HP bar border
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(WORLD_W / 2 - 100, 40, 200, 16);
+    
+    // HP text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(`${Math.ceil(boss.hp)} / ${boss.maxHp}`, WORLD_W / 2, 52);
+    
+    // Ultimate warning
+    if (G.bossUltiActive) {
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+      
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ RIARU - ŞIMŞEK YAĞMURU ⚡', WORLD_W / 2, WORLD_H / 2 - 100);
+    }
   }
 
   // ===== GAME LOOP =====
