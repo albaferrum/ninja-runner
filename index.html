@@ -2047,7 +2047,7 @@
       hp: BOSS.maxHp,
       maxHp: BOSS.maxHp,
       x: WORLD_W + 100,
-      targetX: WORLD_W - BOSS.width - 30,
+      targetX: WORLD_W - BOSS.width - 120, // Closer to player for melee characters
       y: G.groundY,
       w: BOSS.width,
       h: BOSS.height,
@@ -2175,6 +2175,53 @@
         if (boss.hp <= 0) {
           defeatBoss();
           return;
+        }
+      }
+    }
+    
+    // Check melee ultimate collision with boss (headbutt, swordDance, animalFriends, etc.)
+    if (G.ultActive && G.boss) {
+      const pr = playerRect();
+      const bossRect = { x: boss.x, y: boss.y - boss.h, w: boss.w, h: boss.h };
+      
+      // Melee ultimates that can damage boss on contact
+      const meleeUlts = ['headbutt', 'swordDance', 'animalFriends', 'monkeyFriend', 'iceStorm', 'paperWings'];
+      
+      if (meleeUlts.includes(G.ultType)) {
+        // Extended hitbox for melee attacks
+        const meleeRange = G.ultType === 'swordDance' ? 120 : 
+                           G.ultType === 'headbutt' ? 80 : 
+                           G.ultType === 'iceStorm' ? 150 : 60;
+        const meleeRect = { x: pr.x, y: pr.y, w: pr.w + meleeRange, h: pr.h };
+        
+        if (rectsOverlap(meleeRect, bossRect)) {
+          // Damage boss with melee (continuous damage)
+          G.bossMeleeDamageTimer = (G.bossMeleeDamageTimer || 0) - dt;
+          if (G.bossMeleeDamageTimer <= 0) {
+            const damage = G.ultType === 'swordDance' ? 12 : 
+                           G.ultType === 'headbutt' ? 15 : 
+                           G.ultType === 'iceStorm' ? 10 : 8;
+            boss.hp -= damage;
+            G.bossMeleeDamageTimer = 0.3; // Damage every 0.3 seconds
+            
+            // Hit particles
+            for (let k = 0; k < 6; k++) {
+              G.particles.push({
+                x: boss.x + rand(0, boss.w),
+                y: boss.y - boss.h / 2 + rand(-20, 20),
+                vx: rand(-150, -50),
+                vy: rand(-100, 100),
+                life: rand(0.3, 0.5),
+                color: G.ultType === 'iceStorm' ? '#67e8f9' : '#ffeb3b'
+              });
+            }
+            
+            // Check if boss defeated
+            if (boss.hp <= 0) {
+              defeatBoss();
+              return;
+            }
+          }
         }
       }
     }
