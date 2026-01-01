@@ -1395,8 +1395,8 @@
   const charSelectLeaderboardBtn = document.getElementById('charSelectLeaderboardBtn');
   const nickLeaderboardBtn = document.getElementById('nickLeaderboardBtn');
 
-  // API URL - change this if you deploy to a server
-  const API_URL = 'http://localhost:3000';
+  // Firebase Realtime Database URL
+  const FIREBASE_URL = 'https://ninja-runner-694e8-default-rtdb.europe-west1.firebasedatabase.app';
 
   // ===== STATE =====
   let nickname = '';
@@ -1549,18 +1549,41 @@
 
   async function submitScore(score) {
     try {
-      const response = await fetch(`${API_URL}/api/scores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nickname: nickname,
-          score: score,
-          character: selectedChar,
-          location: selectedLocation
-        })
-      });
-      const result = await response.json();
-      return result;
+      // Önce mevcut skorları al
+      const response = await fetch(`${FIREBASE_URL}/scores.json`);
+      const data = await response.json();
+      const scores = data ? Object.entries(data).map(([key, val]) => ({ ...val, _key: key })) : [];
+      
+      // Oyuncunun mevcut skorunu bul
+      const existingEntry = scores.find(s => s.nickname.toLowerCase() === nickname.toLowerCase());
+      
+      const newEntry = {
+        nickname: nickname.slice(0, 16),
+        score: Math.floor(score),
+        character: selectedChar,
+        location: selectedLocation,
+        date: new Date().toISOString()
+      };
+      
+      if (existingEntry) {
+        // Sadece yeni skor daha yüksekse güncelle
+        if (score > existingEntry.score) {
+          await fetch(`${FIREBASE_URL}/scores/${existingEntry._key}.json`, {
+            method: 'PUT',
+            body: JSON.stringify(newEntry)
+          });
+          return { isNewHighScore: true, entry: newEntry };
+        } else {
+          return { isNewHighScore: false, entry: existingEntry };
+        }
+      } else {
+        // Yeni oyuncu ekle
+        await fetch(`${FIREBASE_URL}/scores.json`, {
+          method: 'POST',
+          body: JSON.stringify(newEntry)
+        });
+        return { isNewHighScore: true, entry: newEntry };
+      }
     } catch (error) {
       console.error('Failed to submit score:', error);
       return null;
@@ -1571,8 +1594,16 @@
 
   async function fetchLeaderboard() {
     try {
-      const response = await fetch(`${API_URL}/api/scores`);
-      const scores = await response.json();
+      const response = await fetch(`${FIREBASE_URL}/scores.json`);
+      const data = await response.json();
+      
+      if (!data) return [];
+      
+      // Firebase objesini diziye çevir ve sırala
+      const scores = Object.values(data)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 50);
+      
       return scores;
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
