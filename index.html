@@ -1848,6 +1848,11 @@
     scoreMultiplierTimer: 0,
     ultiDurationMultiplier: 1,
 
+    // Platform system
+    platforms: [],
+    platformSpawnTimer: 0,
+    onPlatform: null, // Currently standing platform
+
     // Coin & Item system
     coins: 0,
     ownedItems: [], // Purchased items
@@ -3034,6 +3039,12 @@
     // Scroll/parchment reset
     G.scrolls = [];
     G.scrollSpawnTimer = rand(3, 6);
+    
+    // Platform reset
+    G.platforms = [];
+    G.platformSpawnTimer = rand(2, 4);
+    G.onPlatform = null;
+    
     G.lives = 3;
     G.scoreMultiplier = 1;
     G.scoreMultiplierTimer = 0;
@@ -3507,6 +3518,157 @@
       label: scrollType.label,
       bobPhase: rand(0, Math.PI * 2)
     });
+  }
+
+  // ===== PLATFORM SYSTEM =====
+  function spawnPlatform() {
+    const width = rand(150, 250); // Wider platforms
+    const height = rand(100, 180); // Height from ground
+    
+    G.platforms.push({
+      x: WORLD_W + 50,
+      y: G.groundY - height,
+      w: width,
+      h: 18,
+      type: Math.random() < 0.3 ? 'wood' : 'stone' // 30% wood, 70% stone
+    });
+  }
+
+  function updatePlatforms(dt) {
+    // Apply slow effect from Viagra item
+    const speedMod = G.activeItem === 'viagra' ? 0.5 : 1;
+    const effectiveSpeed = G.speed * speedMod;
+    
+    // Spawn timer (only when not in boss fight)
+    if (!G.bossActive) {
+      G.platformSpawnTimer -= dt;
+      if (G.platformSpawnTimer <= 0) {
+        if (Math.random() < 0.4) { // 40% chance to spawn
+          spawnPlatform();
+        }
+        G.platformSpawnTimer = rand(3, 6); // Every 3-6 seconds
+      }
+    }
+    
+    // Update platforms
+    for (let i = G.platforms.length - 1; i >= 0; i--) {
+      const p = G.platforms[i];
+      p.x -= effectiveSpeed * dt;
+      
+      // Remove if off screen
+      if (p.x + p.w < -50) {
+        if (G.onPlatform === p) G.onPlatform = null;
+        G.platforms.splice(i, 1);
+      }
+    }
+    
+    // Check if player is on a platform
+    const pr = playerRect();
+    const playerBottom = pr.y + pr.h;
+    
+    // If currently on a platform, check if still valid
+    if (G.onPlatform) {
+      const plat = G.onPlatform;
+      const playerCenterX = pr.x + pr.w / 2;
+      
+      // Still on platform if player center is within platform bounds
+      if (playerCenterX >= plat.x && playerCenterX <= plat.x + plat.w) {
+        // Stay on platform - move with it
+        P.y = plat.y;
+        P.vy = 0;
+        P.onGround = true;
+        return; // Skip other platform checks
+      } else {
+        // Fell off platform - start falling
+        G.onPlatform = null;
+        P.onGround = false;
+      }
+    }
+    
+    // Check for landing on new platform
+    if (P.vy > 0) { // Only when falling
+      for (const plat of G.platforms) {
+        const playerCenterX = pr.x + pr.w / 2;
+        
+        // Check if player center is over platform and feet are near platform top
+        if (playerCenterX >= plat.x && playerCenterX <= plat.x + plat.w) {
+          if (playerBottom >= plat.y - 10 && playerBottom <= plat.y + 15) {
+            // Land on platform
+            P.y = plat.y;
+            P.vy = 0;
+            P.onGround = true;
+            G.onPlatform = plat;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  function drawPlatforms() {
+    for (const p of G.platforms) {
+      ctx.save();
+      
+      if (p.type === 'wood') {
+        // Wooden platform
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        
+        // Wood grain
+        ctx.strokeStyle = '#5D2E0C';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < p.w; i += 20) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + i, p.y);
+          ctx.lineTo(p.x + i, p.y + p.h);
+          ctx.stroke();
+        }
+        
+        // Top highlight
+        ctx.fillStyle = '#A0522D';
+        ctx.fillRect(p.x, p.y, p.w, 3);
+        
+        // Bottom shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(p.x, p.y + p.h, p.w, 5);
+      } else {
+        // Stone platform
+        ctx.fillStyle = '#6B6B6B';
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        
+        // Stone blocks pattern
+        ctx.strokeStyle = '#4A4A4A';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+        
+        // Block divisions
+        ctx.lineWidth = 1;
+        for (let i = 0; i < p.w; i += 25) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + i, p.y);
+          ctx.lineTo(p.x + i, p.y + p.h);
+          ctx.stroke();
+        }
+        
+        // Top highlight
+        ctx.fillStyle = '#888';
+        ctx.fillRect(p.x, p.y, p.w, 2);
+        
+        // Bottom shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(p.x, p.y + p.h, p.w, 6);
+        
+        // Moss/grass on top (random)
+        ctx.fillStyle = '#4A7C4E';
+        for (let i = 5; i < p.w - 5; i += rand(8, 15)) {
+          if (Math.random() < 0.5) {
+            ctx.fillRect(p.x + i, p.y - 3, rand(4, 8), 4);
+          }
+        }
+      }
+      
+      ctx.restore();
+    }
   }
 
   function updateScrolls(dt) {
@@ -7407,13 +7569,21 @@
     } else if (!P.onGround) {
       P.vy += G.gravity * dt;
       P.y += P.vy * dt;
+      
+      // Check ground collision
       if (P.y >= G.groundY) {
         P.y = G.groundY;
         P.vy = 0;
         P.onGround = true;
+        G.onPlatform = null;
       }
     } else {
-      P.y = G.groundY;
+      // On ground - stay at current Y (could be platform or ground)
+      if (G.onPlatform) {
+        P.y = G.onPlatform.y;
+      } else {
+        P.y = G.groundY;
+      }
     }
 
     // Spawn obstacles (only when boss is not active)
@@ -7445,6 +7615,9 @@
 
     // Update scrolls/parchments
     updateScrolls(dt);
+    
+    // Update platforms
+    updatePlatforms(dt);
 
     // Update projectiles
     const pr = playerRect();
@@ -7958,6 +8131,9 @@
     drawClouds(G.dt || 0);
     drawGround();
     drawParticles(G.dt || 0);
+    
+    // Draw platforms
+    drawPlatforms();
 
     for (const o of G.obstacles) drawObstacle(o);
     for (const p of G.projectiles) drawProjectile(p);
