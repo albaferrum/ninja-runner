@@ -95,11 +95,97 @@ app.get('/api/scores/:nickname', (req, res) => {
   }
 });
 
+// ===== USER AUTHENTICATION =====
+const USERS_FILE = path.join(__dirname, 'users.json');
+
+// Initialize users file if it doesn't exist
+if (!fs.existsSync(USERS_FILE)) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
+}
+
+// Register new user
+app.post('/api/register', (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Tüm alanlar gerekli' });
+    }
+
+    if (username.length < 2 || username.length > 16) {
+      return res.status(400).json({ error: 'Kullanıcı adı 2-16 karakter olmalı' });
+    }
+
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Şifre en az 4 karakter olmalı' });
+    }
+
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+
+    // Check if username already exists
+    if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+      return res.status(400).json({ error: 'Bu kullanıcı adı zaten alınmış' });
+    }
+
+    // Check if email already exists
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+      return res.status(400).json({ error: 'Bu e-posta zaten kayıtlı' });
+    }
+
+    // Add new user
+    const newUser = {
+      username: username.slice(0, 16),
+      email: email.toLowerCase(),
+      password: password, // In production, hash this!
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+
+    res.json({ message: 'Kayıt başarılı', username: newUser.username, email: newUser.email });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ error: 'Kayıt işlemi başarısız' });
+  }
+});
+
+// Login user
+app.post('/api/login', (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Kullanıcı adı ve şifre gerekli' });
+    }
+
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+
+    // Find user
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+    if (!user) {
+      return res.status(401).json({ error: 'Kullanıcı bulunamadı' });
+    }
+
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Şifre yanlış' });
+    }
+
+    res.json({ message: 'Giriş başarılı', username: user.username, email: user.email });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ error: 'Giriş işlemi başarısız' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🎮 Ninja Runner Leaderboard Server running at http://localhost:${PORT}`);
   console.log(`📊 API endpoints:`);
   console.log(`   GET  /api/scores          - Get top 50 scores`);
   console.log(`   POST /api/scores          - Submit a score`);
   console.log(`   GET  /api/scores/:nickname - Get player's best score`);
+  console.log(`   POST /api/register        - Register new user`);
+  console.log(`   POST /api/login           - Login user`);
   console.log(`\n🌐 Open http://localhost:${PORT} to play the game!`);
 });
