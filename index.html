@@ -2903,8 +2903,10 @@
       // Registration successful - auto login
       currentUser = { username, email };
       nickname = username;
+      G.coins = 0; // New user starts with 0 coins
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
       welcomeText.textContent = `Hoş geldin, ${username}!`;
+      coinPill.textContent = `🪙 ${G.coins}`;
       showScreen('charSelect');
     } catch (err) {
       registerError.textContent = 'Sunucu hatası';
@@ -2956,6 +2958,7 @@
       currentUser = { username: user.username, email: user.email };
       nickname = user.username;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
+      await loadUserCoins(user.username);
       welcomeText.textContent = `Hoş geldin, ${user.username}!`;
       showScreen('charSelect');
     } catch (err) {
@@ -2969,13 +2972,44 @@
     viewLeaderboard('auth');
   });
 
+  // Load user coins from Firebase
+  async function loadUserCoins(username) {
+    try {
+      const response = await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(username.toLowerCase())}.json`);
+      const data = await response.json();
+      if (data && typeof data.coins === 'number') {
+        G.coins = data.coins;
+        coinPill.textContent = `🪙 ${G.coins}`;
+      } else {
+        G.coins = 0;
+      }
+    } catch (err) {
+      console.error('Failed to load coins:', err);
+      G.coins = 0;
+    }
+  }
+
+  // Save user coins to Firebase
+  async function saveUserCoins() {
+    if (!currentUser) return;
+    try {
+      await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(currentUser.username.toLowerCase())}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ coins: G.coins, lastUpdated: new Date().toISOString() })
+      });
+    } catch (err) {
+      console.error('Failed to save coins:', err);
+    }
+  }
+
   // Check if already logged in
-  (function checkSavedLogin() {
+  (async function checkSavedLogin() {
     const saved = localStorage.getItem('ninja_user');
     if (saved) {
       try {
         currentUser = JSON.parse(saved);
         nickname = currentUser.username;
+        await loadUserCoins(currentUser.username);
         welcomeText.textContent = `Hoş geldin, ${currentUser.username}!`;
         showScreen('charSelect');
       } catch (e) {
@@ -3087,6 +3121,9 @@
 
   async function submitScore(score) {
     try {
+      // Save user coins to Firebase
+      await saveUserCoins();
+
       // Önce mevcut skorları al
       const response = await fetch(`${FIREBASE_URL}/scores.json`);
       const data = await response.json();
