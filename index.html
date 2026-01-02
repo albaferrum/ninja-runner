@@ -1826,13 +1826,18 @@
 
     // Boss state
     bossActive: false,
-    bossDefeated: false,
+    riaru1Defeated: false,
+    maxdownDefeated: false,
+    currentBossType: null, // 'riaru' or 'maxdown'
     boss: null,
     bossProjectiles: [],
     bossAttackTimer: 0,
     bossUltiTimer: 0,
     bossUltiActive: false,
     lightningStrikes: [],
+    laserActive: false,
+    laserTimer: 0,
+    laserY: 0,
 
     // Parchment/Scroll system
     scrolls: [],
@@ -2444,7 +2449,7 @@
     updateItemSlotsUI();
   }
 
-  // ===== BOSS DEFINITION =====
+  // ===== BOSS DEFINITIONS =====
   const BOSS = {
     name: 'Raijin',
     maxHp: 100,
@@ -2454,6 +2459,17 @@
     attackCooldown: 2.5,
     ultiCooldown: 12,
     ultiDuration: 3
+  };
+
+  const BOSS_MAXDOWN = {
+    name: 'MAXDOWN',
+    maxHp: 1500,
+    width: 120,
+    height: 160,
+    x: 400,
+    attackCooldown: 2.0,
+    laserCooldown: 4,
+    laserDuration: 0.8
   };
 
   // ===== PLAYER =====
@@ -2788,13 +2804,17 @@
 
     // Boss reset
     G.bossActive = false;
-    G.bossDefeated = false;
+    G.riaru1Defeated = false;
+    G.maxdownDefeated = false;
+    G.currentBossType = null;
     G.boss = null;
     G.bossProjectiles = [];
     G.bossAttackTimer = 0;
     G.bossUltiTimer = 0;
     G.bossUltiActive = false;
     G.lightningStrikes = [];
+    G.laserActive = false;
+    G.laserTimer = 0;
 
     // Scroll/parchment reset
     G.scrolls = [];
@@ -2890,27 +2910,51 @@
   }
 
   // ===== BOSS SYSTEM =====
-  function spawnBoss() {
+  function spawnBoss(bossType) {
     G.bossActive = true;
-    G.boss = {
-      hp: BOSS.maxHp,
-      maxHp: BOSS.maxHp,
-      x: WORLD_W + 100,
-      targetX: 280, // Middle of screen, reachable by melee characters
-      y: G.groundY,
-      w: BOSS.width,
-      h: BOSS.height,
-      phase: 0, // Animation phase
-      attacking: false,
-      attackAnim: 0
-    };
-    G.bossAttackTimer = 2; // First attack after 2 seconds
-    G.bossUltiTimer = BOSS.ultiCooldown;
+    G.currentBossType = bossType;
+    
+    if (bossType === 'riaru') {
+      G.boss = {
+        hp: BOSS.maxHp,
+        maxHp: BOSS.maxHp,
+        x: WORLD_W + 100,
+        targetX: 280,
+        y: G.groundY,
+        w: BOSS.width,
+        h: BOSS.height,
+        phase: 0,
+        attacking: false,
+        attackAnim: 0
+      };
+      G.bossAttackTimer = 2;
+      G.bossUltiTimer = BOSS.ultiCooldown;
+    } else if (bossType === 'maxdown') {
+      G.boss = {
+        hp: BOSS_MAXDOWN.maxHp,
+        maxHp: BOSS_MAXDOWN.maxHp,
+        x: WORLD_W + 100,
+        targetX: 320,
+        y: G.groundY,
+        w: BOSS_MAXDOWN.width,
+        h: BOSS_MAXDOWN.height,
+        phase: 0,
+        attacking: false,
+        attackAnim: 0,
+        eyeGlow: 0
+      };
+      G.bossAttackTimer = 2;
+      G.bossUltiTimer = BOSS_MAXDOWN.laserCooldown;
+      G.laserActive = false;
+      G.laserTimer = 0;
+      G.maxdownFirstLaserFired = false; // Don't attack until first laser
+    }
+    
     G.bossProjectiles = [];
     G.lightningStrikes = [];
-    G.bossMeleeDamageTimer = 0; // For melee damage timing
-    G.obstacles = []; // Clear regular enemies
-    G.speed = 0; // Stop scrolling during boss fight
+    G.bossMeleeDamageTimer = 0;
+    G.obstacles = [];
+    G.speed = 0;
   }
 
   function updateBoss(dt) {
@@ -2925,6 +2969,11 @@
     // Animation phase
     boss.phase += dt * 3;
     
+    // Eye glow for MAXDOWN
+    if (G.currentBossType === 'maxdown') {
+      boss.eyeGlow = (boss.eyeGlow || 0) + dt * 5;
+    }
+    
     // Attack animation timer
     if (boss.attacking) {
       boss.attackAnim -= dt;
@@ -2935,7 +2984,75 @@
     G.bossAttackTimer -= dt;
     if (G.bossAttackTimer <= 0) {
       bossAttack();
-      G.bossAttackTimer = BOSS.attackCooldown;
+      const cooldown = G.currentBossType === 'maxdown' ? BOSS_MAXDOWN.attackCooldown : BOSS.attackCooldown;
+      G.bossAttackTimer = cooldown;
+    }
+    
+    // MAXDOWN laser attack
+    if (G.currentBossType === 'maxdown' && boss.x <= boss.targetX) {
+      G.bossUltiTimer -= dt;
+      
+      // Laser warning state (last 1.5 seconds before firing)
+      G.laserWarning = G.bossUltiTimer <= 1.5 && G.bossUltiTimer > 0 && !G.laserActive;
+      
+      if (G.bossUltiTimer <= 0 && !G.laserActive) {
+        // Start laser attack
+        G.laserActive = true;
+        G.laserWarning = false;
+        G.laserTimer = BOSS_MAXDOWN.laserDuration;
+        G.laserY = G.groundY - 40; // Laser at player height
+        boss.attacking = true;
+        boss.attackAnim = BOSS_MAXDOWN.laserDuration;
+      }
+      
+      // Update laser
+      if (G.laserActive) {
+        G.laserTimer -= dt;
+        
+        // Laser damage to player
+        const pr = playerRect();
+        const laserRect = { x: 0, y: G.laserY - 15, w: boss.x, h: 30 };
+        const isInvincible = G.activeItem === 'lightning_armor';
+        const isFlying = G.ultActive && (G.ultType === 'eagleFlight' || G.ultType === 'moonlight' || G.ultType === 'iceStorm');
+        
+        if (!isInvincible && !isFlying && rectsOverlap(pr, laserRect)) {
+          // Damage every 0.5 seconds
+          if (!G.laserDamageTimer) G.laserDamageTimer = 0;
+          G.laserDamageTimer -= dt;
+          if (G.laserDamageTimer <= 0) {
+            G.lives--;
+            G.laserDamageTimer = 3; // Only hit once per laser (longer than laser duration)
+            
+            // Hit particles
+            for (let k = 0; k < 8; k++) {
+              G.particles.push({
+                x: pr.x + pr.w/2,
+                y: pr.y + pr.h/2,
+                vx: rand(-100, 100),
+                vy: rand(-100, 50),
+                life: rand(0.2, 0.4),
+                color: '#ff0000'
+              });
+            }
+            
+            if (G.lives <= 0) {
+              G.gameOver = true;
+              G.running = false;
+              G.bossActive = false;
+              G.boss = null;
+              G.laserActive = false;
+              canvas.classList.remove('ult-active');
+              setTimeout(() => showLeaderboard(G.score), 500);
+              return;
+            }
+          }
+        }
+        
+        if (G.laserTimer <= 0) {
+          G.laserActive = false;
+          G.bossUltiTimer = BOSS_MAXDOWN.laserCooldown;
+        }
+      }
     }
     
     // Update boss projectiles
@@ -2974,7 +3091,6 @@
           }
           
           if (G.lives <= 0) {
-            // Game over
             G.gameOver = true;
             G.running = false;
             G.bossActive = false;
@@ -3085,47 +3201,65 @@
 
   function bossAttack() {
     const boss = G.boss;
-    boss.attacking = true;
-    boss.attackAnim = 0.5;
     
-    // Randomly choose attack height: high (jump to dodge) or low (slide to dodge)
-    const attackLow = Math.random() < 0.35; // 35% chance for low attack
-    const attackY = attackLow ? (boss.y - 20) : (boss.y - 70);
-    
-    // Electric shock wave
-    G.bossProjectiles.push({
-      x: boss.x,
-      y: attackY,
-      vx: -450,
-      vy: 0,
-      life: 3,
-      type: 'shockwave',
-      isLow: attackLow
-    });
-    
-    // Particles
-    for (let i = 0; i < 15; i++) {
-      G.particles.push({
-        x: boss.x + rand(-10, 20),
-        y: attackY + rand(-20, 20),
-        vx: rand(-300, -100),
-        vy: rand(-50, 50),
-        life: rand(0.3, 0.6),
-        color: attackLow ? '#fbbf24' : '#67e8f9'
+    if (G.currentBossType === 'maxdown') {
+      // MAXDOWN sadece lazer kullanır - plasma saldırısı yok
+      return;
+    } else {
+      boss.attacking = true;
+      boss.attackAnim = 0.5;
+      
+      // Riaru electric shock wave
+      const attackLow = Math.random() < 0.35;
+      const attackY = attackLow ? (boss.y - 20) : (boss.y - 70);
+      
+      G.bossProjectiles.push({
+        x: boss.x,
+        y: attackY,
+        vx: -450,
+        vy: 0,
+        life: 3,
+        type: 'shockwave',
+        isLow: attackLow
       });
+      
+      // Particles
+      for (let i = 0; i < 15; i++) {
+        G.particles.push({
+          x: boss.x + rand(-10, 20),
+          y: attackY + rand(-20, 20),
+          vx: rand(-300, -100),
+          vy: rand(-50, 50),
+          life: rand(0.3, 0.6),
+          color: attackLow ? '#fbbf24' : '#67e8f9'
+        });
+      }
     }
   }
 
   function defeatBoss() {
+    const bossType = G.currentBossType;
+    const bonus = bossType === 'maxdown' ? 500 : 200;
+    
     G.bossActive = false;
-    G.bossDefeated = true;
+    if (bossType === 'riaru') {
+      G.riaru1Defeated = true;
+    } else if (bossType === 'maxdown') {
+      G.maxdownDefeated = true;
+    }
+    G.currentBossType = null;
     G.boss = null;
     G.bossProjectiles = [];
     G.lightningStrikes = [];
+    G.laserActive = false;
     G.speed = 280; // Resume game
-    G.score += 200; // Bonus for defeating boss
+    G.score += bonus; // Bonus for defeating boss
     
     // Victory particles
+    const particleColors = bossType === 'maxdown' 
+      ? ['#ff0000', '#ff4444', '#ff8800', '#ffcc00']
+      : ['#fbbf24', '#f59e0b', '#ef4444', '#ec4899'];
+    
     for (let i = 0; i < 50; i++) {
       G.particles.push({
         x: WORLD_W - 100 + rand(-50, 50),
@@ -3133,7 +3267,7 @@
         vx: rand(-200, 200),
         vy: rand(-300, -100),
         life: rand(0.5, 1.2),
-        color: ['#fbbf24', '#f59e0b', '#ef4444', '#ec4899'][Math.floor(rand(0, 4))]
+        color: particleColors[Math.floor(rand(0, 4))]
       });
     }
   }
@@ -7068,9 +7202,13 @@
       }
     }
 
-    // Boss spawn at 500 points
-    if (!G.bossActive && !G.bossDefeated && G.score >= 500) {
-      spawnBoss();
+    // Boss spawn at 500 points (Riaru) and 1500 points (MAXDOWN)
+    if (!G.bossActive && G.score >= 500) {
+      if (!G.riaru1Defeated && G.score >= 500) {
+        spawnBoss('riaru');
+      } else if (G.riaru1Defeated && !G.maxdownDefeated && G.score >= 1500) {
+        spawnBoss('maxdown');
+      }
     }
 
     // Update boss
@@ -7602,7 +7740,13 @@
     
     // Draw boss
     if (G.bossActive && G.boss) {
-      drawBoss();
+      if (G.currentBossType === 'maxdown') {
+        drawMaxdown();
+        drawLaserWarning();
+        drawLaser();
+      } else {
+        drawBoss();
+      }
     }
     
     drawPlayer();
@@ -7873,6 +8017,245 @@
     }
   }
 
+  function drawMaxdown() {
+    const boss = G.boss;
+    const x = boss.x;
+    const y = boss.y;
+    const w = boss.w;
+    const h = boss.h;
+    
+    ctx.save();
+    
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y + 5, w/2 + 15, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Glow effect
+    const glowIntensity = 0.3 + Math.sin(boss.eyeGlow || 0) * 0.2;
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 30 * glowIntensity;
+    
+    // Legs (mechanical)
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(x + 20, y - 50, 25, 50);
+    ctx.fillRect(x + w - 45, y - 50, 25, 50);
+    
+    // Leg joints (glowing red)
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath();
+    ctx.arc(x + 32, y - 25, 8, 0, Math.PI * 2);
+    ctx.arc(x + w - 32, y - 25, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Feet (heavy mechanical)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x + 15, y - 12, 35, 14);
+    ctx.fillRect(x + w - 50, y - 12, 35, 14);
+    
+    // Body (bulky mechanical torso)
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 5, y - 120, w - 10, 75);
+    
+    // Chest plate
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 15, y - 115, w - 30, 65);
+    
+    // Red core in chest
+    ctx.fillStyle = '#ff0000';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(x + w/2, y - 85, 18, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Core inner glow
+    ctx.fillStyle = '#ff6666';
+    ctx.beginPath();
+    ctx.arc(x + w/2, y - 85, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Shoulder cannons
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(x - 20, y - 130, 30, 25);
+    ctx.fillRect(x + w - 10, y - 130, 30, 25);
+    
+    // Cannon barrels
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x - 25, y - 125, 15, 15);
+    ctx.fillRect(x + w + 10, y - 125, 15, 15);
+    
+    // Arms (mechanical with red accents)
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(x - 15, y - 100, 20, 55);
+    ctx.fillRect(x + w - 5, y - 100, 20, 55);
+    
+    // Arm joints
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath();
+    ctx.arc(x - 5, y - 75, 6, 0, Math.PI * 2);
+    ctx.arc(x + w + 5, y - 75, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Hands (claws)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x - 20, y - 50, 25, 15);
+    ctx.fillRect(x + w - 5, y - 50, 25, 15);
+    
+    // Head (robotic alien)
+    const headY = y - h + 25;
+    
+    // Neck
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + w/2 - 12, y - 135, 24, 20);
+    
+    // Head base (elongated alien shape)
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, headY + 5, 30, 25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Head dome
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, headY - 10, 25, 20, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    
+    // Single large eye (visor style)
+    ctx.fillStyle = '#ff0000';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 25;
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, headY + 8, 22, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eye scanner line (moving)
+    const scanPos = Math.sin(boss.eyeGlow * 2) * 15;
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(x + w/2 - 20 + scanPos, headY + 5, 4, 6);
+    ctx.globalAlpha = 1;
+    
+    // Antennae
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + w/2 - 15, headY - 25);
+    ctx.lineTo(x + w/2 - 25, headY - 45);
+    ctx.moveTo(x + w/2 + 15, headY - 25);
+    ctx.lineTo(x + w/2 + 25, headY - 45);
+    ctx.stroke();
+    
+    // Antenna tips (glowing)
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath();
+    ctx.arc(x + w/2 - 25, headY - 45, 5, 0, Math.PI * 2);
+    ctx.arc(x + w/2 + 25, headY - 45, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Name tag
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ff0000';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MAXDOWN', x + w/2, headY - 55);
+    
+    ctx.restore();
+  }
+
+  function drawLaserWarning() {
+    if (!G.laserWarning || !G.boss) return;
+    
+    const boss = G.boss;
+    ctx.save();
+    
+    // Big flashing warning text
+    const flash = Math.sin(Date.now() / 80) > 0;
+    
+    if (flash) {
+      // Warning text at top
+      ctx.fillStyle = '#ff0000';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 20;
+      ctx.fillText('⚠️ LAZER GELİYOR! ⚠️', WORLD_W / 2, 100);
+      
+      // Warning line where laser will hit
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([15, 15]);
+      ctx.beginPath();
+      ctx.moveTo(0, G.groundY - 40);
+      ctx.lineTo(boss.x + boss.w/2, G.groundY - 40);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Target zone highlight
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+      ctx.fillRect(0, G.groundY - 60, boss.x + boss.w/2, 40);
+    }
+    
+    // Arrow pointing to safe zone (jump!)
+    ctx.fillStyle = '#00ff00';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('↑ ZIPLA! ↑', 100, G.groundY - 100);
+    
+    ctx.restore();
+  }
+
+  function drawLaser() {
+    if (!G.laserActive || !G.boss) return;
+    
+    const boss = G.boss;
+    ctx.save();
+    
+    // Laser warning line first
+    const laserProgress = 1 - (G.laserTimer / BOSS_MAXDOWN.laserDuration);
+    
+    // Main laser beam
+    const gradient = ctx.createLinearGradient(0, G.laserY - 20, 0, G.laserY + 20);
+    gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
+    gradient.addColorStop(0.3, 'rgba(255, 0, 0, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.7, 'rgba(255, 0, 0, 0.8)');
+    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 30;
+    ctx.fillRect(0, G.laserY - 15, boss.x + 20, 30);
+    
+    // Core beam (brighter)
+    ctx.fillStyle = 'rgba(255, 200, 200, 0.9)';
+    ctx.fillRect(0, G.laserY - 5, boss.x + 20, 10);
+    
+    // Laser source at boss eye
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 40;
+    ctx.beginPath();
+    ctx.arc(boss.x + 20, G.laserY, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Particles along laser
+    for (let i = 0; i < 3; i++) {
+      const px = rand(0, boss.x);
+      G.particles.push({
+        x: px,
+        y: G.laserY + rand(-20, 20),
+        vx: rand(-50, 50),
+        vy: rand(-80, -30),
+        life: rand(0.1, 0.3),
+        color: '#ff4444'
+      });
+    }
+    
+    ctx.restore();
+  }
+
   function drawBossProjectile(p) {
     ctx.save();
     
@@ -7913,6 +8296,36 @@
       }
       
       ctx.shadowBlur = 0;
+    } else if (p.type === 'plasma') {
+      // MAXDOWN plasma orb
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 20;
+      
+      // Outer glow
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size + 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Main orb
+      ctx.fillStyle = '#ff3333';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner core
+      ctx.fillStyle = '#ffaaaa';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Highlight
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.x - p.size * 0.3, p.y - p.size * 0.3, p.size * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
     }
     
     ctx.restore();
@@ -7922,10 +8335,12 @@
     const boss = G.boss;
     
     // Boss name
-    ctx.fillStyle = '#fff';
+    const bossName = G.currentBossType === 'maxdown' ? '🤖 MAXDOWN 🤖' : '⚡ KLON RIARU ⚡';
+    const nameColor = G.currentBossType === 'maxdown' ? '#ff3333' : '#fff';
+    ctx.fillStyle = nameColor;
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('⚡ KLON RIARU ⚡', WORLD_W / 2, 30);
+    ctx.fillText(bossName, WORLD_W / 2, 30);
     
     // HP bar background
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -7933,12 +8348,14 @@
     
     // HP bar
     const hpPercent = boss.hp / boss.maxHp;
-    const hpColor = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#eab308' : '#ef4444';
+    const hpColor = G.currentBossType === 'maxdown' 
+      ? (hpPercent > 0.5 ? '#ff3333' : hpPercent > 0.25 ? '#ff6600' : '#ff0000')
+      : (hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#eab308' : '#ef4444');
     ctx.fillStyle = hpColor;
     ctx.fillRect(WORLD_W / 2 - 98, 42, 196 * hpPercent, 12);
     
     // HP bar border
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = G.currentBossType === 'maxdown' ? '#ff3333' : '#fff';
     ctx.lineWidth = 2;
     ctx.strokeRect(WORLD_W / 2 - 100, 40, 200, 16);
     
