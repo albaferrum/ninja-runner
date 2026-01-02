@@ -1087,7 +1087,7 @@
         <div class="pill" id="charPill">Ninja: -</div>
         <div class="pill" id="scorePill">Skor: 0</div>
         <div class="pill" id="coinPill" style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(245,158,11,0.2)); border: 1px solid #ffd700; color: #ffd700;">🪙 0</div>
-        <button class="shop-btn" id="btnShop">🛒 Dükkan</button>
+        <button class="shop-btn" id="btnShop">🛒 Dükkan(Z)</button>
       </div>
 
       <canvas id="game" width="480" height="640"></canvas>
@@ -1869,9 +1869,9 @@
       id: 'lightning_armor',
       name: 'Yıldırım Zırhı',
       icon: '⚡',
-      description: '10 saniye boyunca tüm rakiplerin içinden geç! Dokunulmaz ol.',
+      description: '15 saniye boyunca tüm rakiplerin içinden geç! Dokunulmaz ol.',
       price: 100,
-      duration: 10,
+      duration: 15,
       cooldown: 30,
       effect: 'invincible'
     },
@@ -1879,9 +1879,9 @@
       id: 'ishigakure_necklace',
       name: 'Ishigakure Kolyesi',
       icon: '📿',
-      description: '20 saniye boyunca X yeteneği cooldown süresi 0.5 saniyeye düşer!',
+      description: '10 saniye boyunca X yeteneği cooldown süresi 0.5 saniyeye düşer!',
       price: 75,
-      duration: 20,
+      duration: 10,
       cooldown: 45,
       effect: 'rapidFire'
     },
@@ -1900,7 +1900,7 @@
       name: 'Rasengan',
       icon: '🌀',
       description: 'Mavi ışıklı küre fırlatırsın! Tüm rakipleri temizler, boss\'a çok hasar! Dattebayo!',
-      price: 100,
+      price: 125,
       duration: 0,
       cooldown: 20,
       effect: 'rasengan'
@@ -1924,6 +1924,16 @@
       duration: 0,
       cooldown: 0,
       effect: 'summonPuppet'
+    },
+    {
+      id: 'iori_katana',
+      name: "Iori'nin Katanası",
+      icon: '⚔️',
+      description: '10 saniye boyunca gökten metal parçalar yağdır! Tüm düşmanlar ölür!',
+      price: 100,
+      duration: 10,
+      cooldown: 0,
+      effect: 'metalRain'
     }
   ];
 
@@ -2112,6 +2122,17 @@
         G.itemSlots[slotIndex] = null;
         G.ownedItems = G.ownedItems.filter(id => id !== item.id);
         break;
+        
+      case 'metalRain':
+        // Iori's Katana - metal rain for 10 seconds
+        G.activeItem = 'iori_katana';
+        G.activeItemTimer = item.duration;
+        G.metalRainTimer = 0;
+        G.ioriKatanaActive = true;
+        // Remove from slot and owned after use
+        G.itemSlots[slotIndex] = null;
+        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        break;
     }
     
     updateItemSlotsUI();
@@ -2176,6 +2197,200 @@
         color: '#a855f7'
       });
     }
+  }
+
+  // Metal Rain System for Iori's Katana
+  function updateMetalRain(dt) {
+    if (!G.ioriKatanaActive) return;
+    
+    G.metalRainTimer += dt;
+    
+    // Spawn metal pieces every 0.1 seconds
+    if (G.metalRainTimer >= 0.1) {
+      G.metalRainTimer = 0;
+      
+      // Spawn 2-3 metal pieces
+      const count = Math.floor(rand(2, 4));
+      for (let i = 0; i < count; i++) {
+        const isDisc = Math.random() < 0.5;
+        if (!G.metalPieces) G.metalPieces = [];
+        G.metalPieces.push({
+          x: rand(50, WORLD_W - 50),
+          y: -50,
+          w: isDisc ? 25 : rand(15, 40),
+          h: isDisc ? 25 : rand(8, 15),
+          vy: rand(400, 600),
+          rotation: rand(0, Math.PI * 2),
+          rotSpeed: rand(-10, 10),
+          isDisc: isDisc
+        });
+      }
+    }
+    
+    // Update metal pieces
+    if (G.metalPieces) {
+      for (let i = G.metalPieces.length - 1; i >= 0; i--) {
+        const m = G.metalPieces[i];
+        m.y += m.vy * dt;
+        m.rotation += m.rotSpeed * dt;
+        
+        // Remove if off screen
+        if (m.y > G.groundY + 50) {
+          // Impact particles
+          for (let k = 0; k < 5; k++) {
+            G.particles.push({
+              x: m.x,
+              y: G.groundY,
+              vx: rand(-100, 100),
+              vy: rand(-150, -50),
+              life: rand(0.2, 0.4),
+              color: '#888'
+            });
+          }
+          G.metalPieces.splice(i, 1);
+          continue;
+        }
+        
+        // Kill enemies on contact
+        const metalRect = { x: m.x - m.w/2, y: m.y - m.h/2, w: m.w, h: m.h };
+        for (let j = G.obstacles.length - 1; j >= 0; j--) {
+          const o = G.obstacles[j];
+          const oRect = { x: o.x, y: o.y - o.h, w: o.w, h: o.h };
+          if (rectsOverlap(metalRect, oRect)) {
+            // Kill enemy
+            for (let k = 0; k < 10; k++) {
+              G.particles.push({
+                x: o.x + o.w/2,
+                y: o.y - o.h/2,
+                vx: rand(-150, 150),
+                vy: rand(-200, -50),
+                life: rand(0.3, 0.6),
+                color: k % 2 === 0 ? '#c0c0c0' : '#ff4444'
+              });
+            }
+            G.obstacles.splice(j, 1);
+            G.score += 10;
+          }
+        }
+        
+        // Damage boss
+        if (G.boss) {
+          const bossRect = { x: G.boss.x, y: G.boss.y - G.boss.h, w: G.boss.w, h: G.boss.h };
+          if (rectsOverlap(metalRect, bossRect)) {
+            G.boss.hp -= 2;
+            G.metalPieces.splice(i, 1);
+            // Spark particles
+            for (let k = 0; k < 5; k++) {
+              G.particles.push({
+                x: m.x,
+                y: m.y,
+                vx: rand(-100, 100),
+                vy: rand(-100, 50),
+                life: rand(0.2, 0.4),
+                color: '#ffff00'
+              });
+            }
+            if (G.boss.hp <= 0) {
+              defeatBoss();
+            }
+          }
+        }
+      }
+    }
+    
+    // Check if effect ended
+    if (G.activeItemTimer <= 0) {
+      G.ioriKatanaActive = false;
+      G.metalPieces = [];
+    }
+  }
+
+  function drawMetalRain() {
+    if (!G.metalPieces || G.metalPieces.length === 0) return;
+    
+    ctx.save();
+    for (const m of G.metalPieces) {
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rotation);
+      
+      if (m.isDisc) {
+        // Draw disc
+        ctx.fillStyle = '#c0c0c0';
+        ctx.beginPath();
+        ctx.arc(0, 0, m.w/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Disc shine
+        ctx.fillStyle = '#e0e0e0';
+        ctx.beginPath();
+        ctx.arc(-3, -3, m.w/4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Disc edge
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, m.w/2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        // Draw rectangle metal piece
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillRect(-m.w/2, -m.h/2, m.w, m.h);
+        
+        // Shine
+        ctx.fillStyle = '#d0d0d0';
+        ctx.fillRect(-m.w/2 + 2, -m.h/2 + 2, m.w/3, m.h - 4);
+        
+        // Edge
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-m.w/2, -m.h/2, m.w, m.h);
+      }
+      
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawIoriKatana() {
+    if (!G.ioriKatanaActive) return;
+    
+    const pr = playerRect();
+    ctx.save();
+    
+    // Katana in player's hand
+    const katanaX = pr.x + pr.w - 5;
+    const katanaY = pr.y + pr.h * 0.3;
+    const swing = Math.sin(G.t * 8) * 0.3;
+    
+    ctx.translate(katanaX, katanaY);
+    ctx.rotate(-0.5 + swing);
+    
+    // Blade
+    ctx.fillStyle = '#e0e0e0';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(50, -5);
+    ctx.lineTo(55, 0);
+    ctx.lineTo(50, 5);
+    ctx.lineTo(0, 3);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Blade shine
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(5, -2, 40, 2);
+    
+    // Handle
+    ctx.fillStyle = '#4a3728';
+    ctx.fillRect(-15, -4, 18, 8);
+    
+    // Guard
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(-2, -7, 4, 14);
+    
+    ctx.restore();
   }
 
   function updatePuppet(dt) {
@@ -3936,6 +4151,15 @@
       if (k === '1') { e.preventDefault(); useItem(0); }
       if (k === '2') { e.preventDefault(); useItem(1); }
       if (k === '3') { e.preventDefault(); useItem(2); }
+      // Z - Toggle item shop
+      if (k === 'z') { 
+        e.preventDefault(); 
+        if (itemShopOverlay.classList.contains('active')) {
+          closeItemShop();
+        } else {
+          openItemShop();
+        }
+      }
     }
   });
 
@@ -7020,6 +7244,9 @@
     
     // Update puppet
     updatePuppet(dt);
+    
+    // Update metal rain (Iori's Katana)
+    updateMetalRain(dt);
 
     // Cooldowns - Ishigakure Necklace effect
     const skillXReduction = G.activeItem === 'ishigakure_necklace' ? 4 : 1;
@@ -7749,7 +7976,13 @@
       }
     }
     
+    // Draw metal rain (Iori's Katana)
+    drawMetalRain();
+    
     drawPlayer();
+    
+    // Draw Iori's Katana in player hand
+    drawIoriKatana();
     
     // Draw puppet (slave character)
     drawPuppet();
