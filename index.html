@@ -3471,8 +3471,8 @@
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
-      // Save username mapping and user data
-      await database.ref(`usernames/${username.toLowerCase()}`).set(user.uid);
+      // Save username -> email mapping (for login lookup) and user data
+      await database.ref(`usernames/${username.toLowerCase()}`).set(email);
       await database.ref(`users/${user.uid}`).set({
         username: username,
         email: email,
@@ -3536,9 +3536,8 @@
           loginBtn.disabled = false;
           return;
         }
-        const uid = usernameSnapshot.val();
-        const userSnapshot = await database.ref(`users/${uid}/email`).once('value');
-        email = userSnapshot.val();
+        // usernames tablosunda email saklanıyor
+        email = usernameSnapshot.val();
       }
 
       // Sign in with Firebase Auth
