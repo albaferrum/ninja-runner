@@ -2413,6 +2413,13 @@
   // Firebase Realtime Database URL
   const FIREBASE_URL = 'https://ninja-runner-694e8-default-rtdb.europe-west1.firebasedatabase.app';
 
+  // Server URL for secure score submission
+  const SERVER_URL = window.location.origin; // Use same origin
+
+  // Game session for anti-cheat
+  let gameSessionToken = null;
+  let lastScoreUpdate = 0;
+
   // ===== STATE =====
   let nickname = '';
   let selectedChar = null;
@@ -5549,7 +5556,39 @@
       // Save user data to Firebase
       await saveUserData();
 
-      // Önce mevcut skorları al
+      // Use secure server endpoint if session available
+      if (gameSessionToken) {
+        console.log('🔒 Submitting score via secure session');
+        const response = await fetch(`${SERVER_URL}/api/game/end`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionToken: gameSessionToken,
+            finalScore: Math.floor(score)
+          })
+        });
+        const result = await response.json();
+        gameSessionToken = null; // Session consumed
+        
+        if (response.ok) {
+          return { 
+            isNewHighScore: result.isNewHighScore, 
+            entry: { 
+              nickname, 
+              score: result.score,
+              character: selectedChar,
+              location: selectedLocation
+            }
+          };
+        } else {
+          console.warn('Score submission issue:', result);
+          // Still show leaderboard even if rejected
+          return { isNewHighScore: false, entry: { nickname, score: 0 } };
+        }
+      }
+
+      // Fallback: Use Firebase directly (limited/capped scores)
+      console.log('⚠️ Using fallback score submission');
       const response = await fetch(`${FIREBASE_URL}/scores.json`);
       const data = await response.json();
       const scores = data ? Object.entries(data).map(([key, val]) => ({ ...val, _key: key })) : [];
@@ -5735,7 +5774,7 @@
   }
 
   // ===== INIT GAME =====
-  function initGame() {
+  async function initGame() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
@@ -5750,6 +5789,27 @@
     
     // Apply location background to canvas
     canvas.style.background = loc.canvasBg;
+
+    // Start secure game session
+    try {
+      const response = await fetch(`${SERVER_URL}/api/game/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: nickname,
+          character: selectedChar,
+          location: selectedLocation
+        })
+      });
+      const data = await response.json();
+      if (data.sessionToken) {
+        gameSessionToken = data.sessionToken;
+        console.log('🎮 Game session started');
+      }
+    } catch (err) {
+      console.log('Could not start secure session, using fallback');
+      gameSessionToken = null;
+    }
 
     resetGame();
     requestAnimationFrame(gameLoop);
@@ -10207,6 +10267,19 @@
     G.dt = dt;
     
     if (!G.running) return;
+
+    // Send periodic score update to server (every 5 seconds)
+    if (gameSessionToken && Date.now() - lastScoreUpdate > 5000) {
+      lastScoreUpdate = Date.now();
+      fetch(`${SERVER_URL}/api/game/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionToken: gameSessionToken,
+          score: Math.floor(G.score)
+        })
+      }).catch(() => {}); // Silent fail, don't block game
+    }
 
     // Apply slow effect from Viagra item
     const speedMod = G.activeItem === 'viagra' ? 0.5 : 1;
