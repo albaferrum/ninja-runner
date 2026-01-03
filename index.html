@@ -153,6 +153,19 @@
       justify-content: flex-start;
       padding-top: 40px;
       padding-bottom: 40px;
+      position: relative;
+    }
+    .char-select-coins {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,180,0,0.2);
+      border: 2px solid rgba(255,180,0,0.4);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffd700;
     }
     .char-grid {
       display: grid;
@@ -669,6 +682,138 @@
       to { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
     }
 
+    /* ===== DOJO OVERLAY ===== */
+    .dojo-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .dojo-overlay.active { display: flex; }
+    .dojo-container {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid rgba(255,180,0,0.4);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+    }
+    .dojo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .dojo-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffd700;
+    }
+    .dojo-coins {
+      background: rgba(255,180,0,0.2);
+      padding: 8px 16px;
+      border-radius: 15px;
+      color: #ffd700;
+      font-weight: 700;
+    }
+    .dojo-subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .dojo-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .dojo-item {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: grid;
+      grid-template-columns: 50px 1fr auto;
+      align-items: center;
+      text-align: left;
+      gap: 15px;
+    }
+    .dojo-item:hover {
+      background: rgba(255,180,0,0.1);
+      border-color: rgba(255,180,0,0.4);
+    }
+    .dojo-item.owned {
+      border-color: rgba(0,255,100,0.4);
+      background: rgba(0,255,100,0.1);
+    }
+    .dojo-item.cant-afford {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .dojo-item-icon {
+      font-size: 32px;
+    }
+    .dojo-item-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .dojo-item-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 4px;
+    }
+    .dojo-item-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffd700;
+    }
+    .dojo-item-status {
+      font-size: 12px;
+      color: #4ade80;
+      margin-top: 5px;
+    }
+    .dojo-item-info {
+      flex: 1;
+    }
+    .dojo-item-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .dojo-buy-btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dojo-buy-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(255,180,0,0.4);
+    }
+    .dojo-buy-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .dojo-buy-btn.owned {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      pointer-events: none;
+    }
+
     /* ===== LOCATION SELECT SCREEN ===== */
     #locationSelectScreen {
       background: radial-gradient(ellipse at center, rgba(20,80,60,0.3) 0%, transparent 70%),
@@ -916,6 +1061,9 @@
 
   <!-- ===== CHARACTER SELECT SCREEN ===== -->
   <div class="screen" id="charSelectScreen">
+    <!-- Coin display top right -->
+    <div class="char-select-coins" id="charSelectCoins">🪙 0</div>
+    
     <div class="screen-title">Ninja Seç</div>
     <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
     
@@ -1118,8 +1266,63 @@
 
     <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
     <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button class="btn-secondary" id="dojoBtn" style="background: rgba(255,180,0,0.3);">🥋 Dojo</button>
       <button class="btn-secondary" id="charSelectLeaderboardBtn">🏆 Skor Tablosu</button>
       <button class="btn-secondary" id="logoutBtn" style="background: rgba(255,100,100,0.2);">🚪 Çıkış Yap</button>
+    </div>
+  </div>
+
+  <!-- ===== DOJO OVERLAY ===== -->
+  <div class="dojo-overlay" id="dojoOverlay">
+    <div class="dojo-container">
+      <div class="dojo-header">
+        <div class="dojo-title">🥋 DOJO - Kalıcı Bonuslar</div>
+        <div class="dojo-coins" id="dojoCoins">🪙 0</div>
+      </div>
+      <div class="dojo-subtitle">Bu bonuslar hesabına kalıcı olarak eklenir!</div>
+      
+      <div class="dojo-grid">
+        <div class="dojo-item" id="dojoDoubleJump">
+          <div class="dojo-item-icon">🦘</div>
+          <div class="dojo-item-info">
+            <div class="dojo-item-name">Çift Zıplama</div>
+            <div class="dojo-item-desc">Havadayken tekrar zıplayabilirsin!</div>
+          </div>
+          <div class="dojo-item-right">
+            <div class="dojo-item-price">🪙 3000</div>
+            <button class="dojo-buy-btn" id="buyDoubleJump">Satın Al</button>
+            <div class="dojo-item-status" id="dojoDoubleJumpStatus"></div>
+          </div>
+        </div>
+        
+        <div class="dojo-item" id="dojoExtraLife">
+          <div class="dojo-item-icon">❤️</div>
+          <div class="dojo-item-info">
+            <div class="dojo-item-name">Ekstra Can</div>
+            <div class="dojo-item-desc">Her oyuna +1 can ile başla!</div>
+          </div>
+          <div class="dojo-item-right">
+            <div class="dojo-item-price">🪙 3000</div>
+            <button class="dojo-buy-btn" id="buyExtraLife">Satın Al</button>
+            <div class="dojo-item-status" id="dojoExtraLifeStatus">x0</div>
+          </div>
+        </div>
+        
+        <div class="dojo-item" id="dojoAirDash">
+          <div class="dojo-item-icon">💨</div>
+          <div class="dojo-item-info">
+            <div class="dojo-item-name">İtici Güç</div>
+            <div class="dojo-item-desc">Havada E tuşu ile ileri atıl!</div>
+          </div>
+          <div class="dojo-item-right">
+            <div class="dojo-item-price">🪙 3000</div>
+            <button class="dojo-buy-btn" id="buyAirDash">Satın Al</button>
+            <div class="dojo-item-status" id="dojoAirDashStatus"></div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn-secondary" id="dojoClose">Kapat</button>
     </div>
   </div>
 
@@ -1847,6 +2050,29 @@
   const charCards = document.querySelectorAll('.char-card');
   const locationCards = document.querySelectorAll('.location-card');
   const locationStartBtn = document.getElementById('locationStartBtn');
+
+  // Dojo elements
+  const charSelectCoins = document.getElementById('charSelectCoins');
+  const dojoBtn = document.getElementById('dojoBtn');
+  const dojoOverlay = document.getElementById('dojoOverlay');
+  const dojoCoins = document.getElementById('dojoCoins');
+  const dojoDoubleJump = document.getElementById('dojoDoubleJump');
+  const dojoExtraLife = document.getElementById('dojoExtraLife');
+  const dojoDoubleJumpStatus = document.getElementById('dojoDoubleJumpStatus');
+  const dojoExtraLifeStatus = document.getElementById('dojoExtraLifeStatus');
+  const dojoAirDashStatus = document.getElementById('dojoAirDashStatus');
+  const buyDoubleJump = document.getElementById('buyDoubleJump');
+  const buyExtraLife = document.getElementById('buyExtraLife');
+  const buyAirDash = document.getElementById('buyAirDash');
+  const dojoAirDash = document.getElementById('dojoAirDash');
+  const dojoClose = document.getElementById('dojoClose');
+
+  // Permanent bonuses (loaded from Firebase)
+  let permBonuses = {
+    doubleJump: false,
+    extraLives: 0,
+    airDash: false
+  };
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -2904,9 +3130,12 @@
       currentUser = { username, email };
       nickname = username;
       G.coins = 0; // New user starts with 0 coins
+      permBonuses.doubleJump = false;
+      permBonuses.extraLives = 0;
+      permBonuses.airDash = false;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
       welcomeText.textContent = `Hoş geldin, ${username}!`;
-      coinPill.textContent = `🪙 ${G.coins}`;
+      updateCoinsDisplay();
       showScreen('charSelect');
     } catch (err) {
       registerError.textContent = 'Sunucu hatası';
@@ -2958,7 +3187,7 @@
       currentUser = { username: user.username, email: user.email };
       nickname = user.username;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
-      await loadUserCoins(user.username);
+      await loadUserData(user.username);
       welcomeText.textContent = `Hoş geldin, ${user.username}!`;
       showScreen('charSelect');
     } catch (err) {
@@ -2972,35 +3201,160 @@
     viewLeaderboard('auth');
   });
 
-  // Load user coins from Firebase
-  async function loadUserCoins(username) {
+  // Load user coins and bonuses from Firebase
+  async function loadUserData(username) {
     try {
       const response = await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(username.toLowerCase())}.json`);
       const data = await response.json();
-      if (data && typeof data.coins === 'number') {
-        G.coins = data.coins;
-        coinPill.textContent = `🪙 ${G.coins}`;
+      if (data) {
+        if (typeof data.coins === 'number') {
+          G.coins = data.coins;
+        } else {
+          G.coins = 0;
+        }
+        // Load permanent bonuses
+        permBonuses.doubleJump = data.doubleJump || false;
+        permBonuses.extraLives = data.extraLives || 0;
+        permBonuses.airDash = data.airDash || false;
       } else {
         G.coins = 0;
+        permBonuses.doubleJump = false;
+        permBonuses.extraLives = 0;
+        permBonuses.airDash = false;
       }
+      updateCoinsDisplay();
+      updateDojoUI();
     } catch (err) {
-      console.error('Failed to load coins:', err);
+      console.error('Failed to load user data:', err);
       G.coins = 0;
+      permBonuses.doubleJump = false;
+      permBonuses.extraLives = 0;
+      permBonuses.airDash = false;
     }
   }
 
-  // Save user coins to Firebase
-  async function saveUserCoins() {
+  // Save user data to Firebase
+  async function saveUserData() {
     if (!currentUser) return;
     try {
       await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(currentUser.username.toLowerCase())}.json`, {
         method: 'PATCH',
-        body: JSON.stringify({ coins: G.coins, lastUpdated: new Date().toISOString() })
+        body: JSON.stringify({ 
+          coins: G.coins, 
+          doubleJump: permBonuses.doubleJump,
+          extraLives: permBonuses.extraLives,
+          airDash: permBonuses.airDash,
+          lastUpdated: new Date().toISOString() 
+        })
       });
     } catch (err) {
-      console.error('Failed to save coins:', err);
+      console.error('Failed to save user data:', err);
     }
   }
+
+  // Update coins display everywhere
+  function updateCoinsDisplay() {
+    coinPill.textContent = `🪙 ${G.coins}`;
+    charSelectCoins.textContent = `🪙 ${G.coins}`;
+    dojoCoins.textContent = `🪙 ${G.coins}`;
+  }
+
+  // Update Dojo UI based on bonuses and coins
+  function updateDojoUI() {
+    // Double Jump
+    if (permBonuses.doubleJump) {
+      dojoDoubleJump.classList.add('owned');
+      dojoDoubleJump.classList.remove('cant-afford');
+      dojoDoubleJumpStatus.textContent = '✓ Sahipsin';
+      buyDoubleJump.textContent = '✓ Alındı';
+      buyDoubleJump.classList.add('owned');
+      buyDoubleJump.disabled = true;
+    } else if (G.coins >= 3000) {
+      dojoDoubleJump.classList.remove('owned', 'cant-afford');
+      dojoDoubleJumpStatus.textContent = '';
+      buyDoubleJump.textContent = 'Satın Al';
+      buyDoubleJump.classList.remove('owned');
+      buyDoubleJump.disabled = false;
+    } else {
+      dojoDoubleJump.classList.remove('owned');
+      dojoDoubleJump.classList.add('cant-afford');
+      dojoDoubleJumpStatus.textContent = '';
+      buyDoubleJump.textContent = 'Satın Al';
+      buyDoubleJump.classList.remove('owned');
+      buyDoubleJump.disabled = true;
+    }
+
+    // Extra Lives
+    dojoExtraLifeStatus.textContent = `Mevcut: +${permBonuses.extraLives} can`;
+    if (G.coins >= 3000) {
+      dojoExtraLife.classList.remove('cant-afford');
+      buyExtraLife.disabled = false;
+    } else {
+      dojoExtraLife.classList.add('cant-afford');
+      buyExtraLife.disabled = true;
+    }
+
+    // Air Dash
+    if (permBonuses.airDash) {
+      dojoAirDash.classList.add('owned');
+      dojoAirDash.classList.remove('cant-afford');
+      dojoAirDashStatus.textContent = '✓ Sahipsin';
+      buyAirDash.textContent = '✓ Alındı';
+      buyAirDash.classList.add('owned');
+      buyAirDash.disabled = true;
+    } else if (G.coins >= 3000) {
+      dojoAirDash.classList.remove('owned', 'cant-afford');
+      dojoAirDashStatus.textContent = '';
+      buyAirDash.textContent = 'Satın Al';
+      buyAirDash.classList.remove('owned');
+      buyAirDash.disabled = false;
+    } else {
+      dojoAirDash.classList.remove('owned');
+      dojoAirDash.classList.add('cant-afford');
+      dojoAirDashStatus.textContent = '';
+      buyAirDash.textContent = 'Satın Al';
+      buyAirDash.classList.remove('owned');
+      buyAirDash.disabled = true;
+    }
+  }
+
+  // Dojo purchase handlers
+  buyDoubleJump.addEventListener('click', async () => {
+    if (permBonuses.doubleJump || G.coins < 3000) return;
+    G.coins -= 3000;
+    permBonuses.doubleJump = true;
+    await saveUserData();
+    updateCoinsDisplay();
+    updateDojoUI();
+  });
+
+  buyExtraLife.addEventListener('click', async () => {
+    if (G.coins < 3000) return;
+    G.coins -= 3000;
+    permBonuses.extraLives += 1;
+    await saveUserData();
+    updateCoinsDisplay();
+    updateDojoUI();
+  });
+
+  buyAirDash.addEventListener('click', async () => {
+    if (permBonuses.airDash || G.coins < 3000) return;
+    G.coins -= 3000;
+    permBonuses.airDash = true;
+    await saveUserData();
+    updateCoinsDisplay();
+    updateDojoUI();
+  });
+
+  // Dojo open/close
+  dojoBtn.addEventListener('click', () => {
+    updateDojoUI();
+    dojoOverlay.classList.add('active');
+  });
+
+  dojoClose.addEventListener('click', () => {
+    dojoOverlay.classList.remove('active');
+  });
 
   // Check if already logged in
   (async function checkSavedLogin() {
@@ -3009,7 +3363,7 @@
       try {
         currentUser = JSON.parse(saved);
         nickname = currentUser.username;
-        await loadUserCoins(currentUser.username);
+        await loadUserData(currentUser.username);
         welcomeText.textContent = `Hoş geldin, ${currentUser.username}!`;
         showScreen('charSelect');
       } catch (e) {
@@ -3121,8 +3475,8 @@
 
   async function submitScore(score) {
     try {
-      // Save user coins to Firebase
-      await saveUserCoins();
+      // Save user data to Firebase
+      await saveUserData();
 
       // Önce mevcut skorları al
       const response = await fetch(`${FIREBASE_URL}/scores.json`);
@@ -3375,7 +3729,15 @@
     G.platformSpawnTimer = rand(2, 4);
     G.onPlatform = null;
     
-    G.lives = 3;
+    // Apply permanent bonuses
+    G.lives = 3 + permBonuses.extraLives;
+    G.maxLives = 3 + permBonuses.extraLives;
+    G.canDoubleJump = permBonuses.doubleJump;
+    G.hasDoubleJumped = false;
+    G.canAirDash = permBonuses.airDash;
+    G.hasAirDashed = false;
+    G.airDashTimer = 0;
+    
     G.scoreMultiplier = 1;
     G.scoreMultiplierTimer = 0;
     G.ultiDurationMultiplier = 1;
@@ -3907,6 +4269,8 @@
         P.y = plat.y;
         P.vy = 0;
         P.onGround = true;
+        G.hasDoubleJumped = false; // Reset while on platform
+        G.hasAirDashed = false; // Reset while on platform
         return; // Skip other platform checks
       } else {
         // Fell off platform - start falling
@@ -3928,6 +4292,8 @@
             P.vy = 0;
             P.onGround = true;
             G.onPlatform = plat;
+            G.hasDoubleJumped = false; // Reset double jump on platform landing
+            G.hasAirDashed = false; // Reset air dash on platform landing
             break;
           }
         }
@@ -4495,6 +4861,9 @@
     if (P.onGround) {
       P.vy = P.jumpVel;
       P.onGround = false;
+      G.hasDoubleJumped = false; // Reset double jump when leaving ground
+      G.hasAirDashed = false; // Reset air dash when leaving ground
+      G.onPlatform = null; // Leave platform
       
       for (let i = 0; i < 8; i++) {
         G.particles.push({
@@ -4504,6 +4873,23 @@
           vy: rand(-80, -30),
           life: rand(0.2, 0.35),
           color: '#888'
+        });
+      }
+    } else if (G.canDoubleJump && !G.hasDoubleJumped) {
+      // Double jump in air!
+      P.vy = P.jumpVel * 0.85; // Slightly weaker second jump
+      G.hasDoubleJumped = true;
+      G.hasAirDashed = false; // Reset air dash on double jump too
+      
+      // Double jump particles (different color)
+      for (let i = 0; i < 10; i++) {
+        G.particles.push({
+          x: P.x + rand(5, P.w - 5),
+          y: P.y - rand(10, 30),
+          vx: rand(-50, 50),
+          vy: rand(-60, -20),
+          life: rand(0.2, 0.4),
+          color: '#ffd700'
         });
       }
     }
@@ -4531,6 +4917,38 @@
     P.crouching = on;
     P.h = on ? P.crouchH : P.baseH;
     if (P.onGround) P.y = G.groundY;
+  }
+
+  // Air Dash - İtici Güç
+  function airDash() {
+    console.log('airDash called:', {
+      gameOver: G.gameOver,
+      running: G.running,
+      onGround: P.onGround,
+      canAirDash: G.canAirDash,
+      hasAirDashed: G.hasAirDashed
+    });
+    
+    if (G.gameOver || !G.running) return;
+    if (P.onGround) return; // Only works in air
+    if (!G.canAirDash) return; // Need to own the ability
+    if (G.hasAirDashed) return; // Already used this jump
+    
+    console.log('AIR DASH ACTIVATED!');
+    G.hasAirDashed = true;
+    G.airDashTimer = 0.15; // Dash duration
+    
+    // Dash particles
+    for (let i = 0; i < 15; i++) {
+      G.particles.push({
+        x: P.x - rand(5, 30),
+        y: P.y - P.h/2 + rand(-20, 20),
+        vx: rand(-200, -100),
+        vy: rand(-30, 30),
+        life: rand(0.2, 0.4),
+        color: '#00bfff'
+      });
+    }
   }
 
   // ===== INPUT =====
@@ -4639,6 +5057,7 @@
       if (k === 'x') { e.preventDefault(); useSkillX(); }
       if (k === 'c') { e.preventDefault(); useSkillF(); }
       if (k === 'r') { e.preventDefault(); resetGame(); }
+      if (k === 'e') { e.preventDefault(); airDash(); }
       // Item slots 1-2-3
       if (k === '1') { e.preventDefault(); useItem(0); }
       if (k === '2') { e.preventDefault(); useItem(1); }
@@ -7897,8 +8316,23 @@
         P.onGround = false;
       }
     } else if (!P.onGround) {
-      P.vy += G.gravity * dt;
-      P.y += P.vy * dt;
+      // Air Dash - İtici Güç
+      if (G.airDashTimer > 0) {
+        G.airDashTimer -= dt;
+        P.x += 800 * dt; // Dash forward!
+        P.vy = 0; // Freeze vertical movement during dash
+        // Keep player in bounds
+        if (P.x > 300) P.x = 300;
+      } else {
+        P.vy += G.gravity * dt;
+        P.y += P.vy * dt;
+        
+        // Smoothly return to normal position after dash
+        if (P.x > 100) {
+          P.x -= 400 * dt;
+          if (P.x < 100) P.x = 100;
+        }
+      }
       
       // Check ground collision
       if (P.y >= G.groundY) {
@@ -7906,6 +8340,9 @@
         P.vy = 0;
         P.onGround = true;
         G.onPlatform = null;
+        G.hasDoubleJumped = false; // Reset double jump on landing
+        G.hasAirDashed = false; // Reset air dash on landing
+        console.log('LANDED - hasAirDashed reset to false');
       }
     } else {
       // On ground - stay at current Y (could be platform or ground)
@@ -7914,6 +8351,8 @@
       } else {
         P.y = G.groundY;
       }
+      G.hasDoubleJumped = false; // Reset double jump while on ground
+      G.hasAirDashed = false; // Reset air dash while on ground
     }
 
     // Spawn obstacles (only when boss is not active)
