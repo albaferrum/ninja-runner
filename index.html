@@ -153,12 +153,13 @@
       justify-content: flex-start;
       padding-top: 40px;
       padding-bottom: 40px;
+      padding-right: 180px;
       position: relative;
     }
     .char-select-coins {
       position: absolute;
       top: 20px;
-      right: 20px;
+      right: 190px;
       background: rgba(255,180,0,0.2);
       border: 2px solid rgba(255,180,0,0.4);
       padding: 10px 20px;
@@ -166,6 +167,23 @@
       font-size: 18px;
       font-weight: 700;
       color: #ffd700;
+    }
+    /* Right side panel for buttons */
+    .char-select-sidebar {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
+    }
+    .char-select-sidebar .btn-secondary {
+      width: 140px;
+      text-align: center;
+      padding: 12px 16px;
+      font-size: 13px;
     }
     .char-grid {
       display: grid;
@@ -814,6 +832,208 @@
       pointer-events: none;
     }
 
+    /* ===== ARENA OVERLAY ===== */
+    .arena-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .arena-overlay.active { display: flex; }
+    .arena-container {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid rgba(255,50,50,0.4);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+    }
+    .arena-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ff6b6b;
+      margin-bottom: 10px;
+    }
+    .arena-subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .arena-section {
+      margin-bottom: 20px;
+    }
+    .arena-section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 15px;
+    }
+    .arena-room-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+    .arena-room-item {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .arena-room-item:hover {
+      background: rgba(255,100,100,0.1);
+      border-color: rgba(255,100,100,0.4);
+    }
+    .arena-room-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .arena-room-host {
+      font-weight: 600;
+      color: #fff;
+    }
+    .arena-room-char {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+    }
+    .arena-room-status {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255,180,0,0.2);
+      color: #ffd700;
+    }
+    .arena-room-status.waiting {
+      background: rgba(0,255,100,0.2);
+      color: #4ade80;
+    }
+    .arena-btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    .arena-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255,100,100,0.4);
+    }
+    .arena-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .arena-btn.secondary {
+      background: rgba(255,255,255,0.1);
+    }
+    .arena-no-rooms {
+      color: rgba(255,255,255,0.4);
+      padding: 20px;
+      font-style: italic;
+    }
+
+    /* Arena Lobby */
+    .arena-lobby {
+      display: none;
+    }
+    .arena-lobby.active {
+      display: block;
+    }
+    .arena-lobby-players {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin: 30px 0;
+    }
+    .arena-player-slot {
+      width: 120px;
+      height: 160px;
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.4);
+    }
+    .arena-player-slot.filled {
+      border: 2px solid rgba(255,100,100,0.5);
+      background: rgba(255,100,100,0.1);
+    }
+    .arena-player-slot.ready {
+      border-color: #4ade80;
+      background: rgba(74,222,128,0.1);
+    }
+    .arena-player-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 10px;
+    }
+    .arena-player-char {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+    }
+    .arena-vs {
+      font-size: 36px;
+      font-weight: 900;
+      color: #ff6b6b;
+      text-shadow: 0 0 20px rgba(255,100,100,0.5);
+    }
+    .arena-ready-btn {
+      padding: 15px 40px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .arena-ready-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 25px rgba(74,222,128,0.4);
+    }
+    .arena-ready-btn.ready {
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    }
+    .arena-countdown {
+      font-size: 48px;
+      font-weight: 900;
+      color: #ff6b6b;
+      text-shadow: 0 0 30px rgba(255,100,100,0.6);
+      margin: 20px 0;
+      display: none;
+    }
+    .arena-countdown.active {
+      display: block;
+      animation: countdownPulse 1s infinite;
+    }
+    @keyframes countdownPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
     /* ===== LOCATION SELECT SCREEN ===== */
     #locationSelectScreen {
       background: radial-gradient(ellipse at center, rgba(20,80,60,0.3) 0%, transparent 70%),
@@ -1264,12 +1484,15 @@
       </div>
     </div>
 
-    <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
+    <!-- Right side panel -->
+    <div class="char-select-sidebar">
       <button class="btn-secondary" id="dojoBtn" style="background: rgba(255,180,0,0.3);">🥋 Dojo</button>
+      <button class="btn-secondary" id="arenaBtn" style="background: rgba(255,50,50,0.3);">⚔️ Arena</button>
       <button class="btn-secondary" id="charSelectLeaderboardBtn">🏆 Skor Tablosu</button>
       <button class="btn-secondary" id="logoutBtn" style="background: rgba(255,100,100,0.2);">🚪 Çıkış Yap</button>
     </div>
+
+    <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
   </div>
 
   <!-- ===== DOJO OVERLAY ===== -->
@@ -1323,6 +1546,56 @@
       </div>
       
       <button class="btn-secondary" id="dojoClose">Kapat</button>
+    </div>
+  </div>
+
+  <!-- ===== ARENA OVERLAY ===== -->
+  <div class="arena-overlay" id="arenaOverlay">
+    <div class="arena-container">
+      <!-- Main Menu -->
+      <div id="arenaMenu">
+        <div class="arena-title">⚔️ ARENA - PvP Düello</div>
+        <div class="arena-subtitle">Diğer oyunculara karşı savaş!</div>
+        
+        <div class="arena-section">
+          <div class="arena-section-title">📋 Aktif Odalar</div>
+          <div class="arena-room-list" id="arenaRoomList">
+            <div class="arena-no-rooms">Yükleniyor...</div>
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: center; gap: 10px;">
+          <button class="arena-btn" id="arenaCreateRoom">🏠 Oda Oluştur</button>
+          <button class="arena-btn secondary" id="arenaClose">❌ Kapat</button>
+        </div>
+      </div>
+
+      <!-- Lobby -->
+      <div class="arena-lobby" id="arenaLobby">
+        <div class="arena-title">⚔️ Düello Odası</div>
+        <div class="arena-subtitle" id="arenaRoomCode">Oda Kodu: ---</div>
+        
+        <div class="arena-lobby-players">
+          <div class="arena-player-slot" id="arenaPlayer1">
+            <div style="font-size: 40px;">👤</div>
+            <div class="arena-player-name">Bekleniyor...</div>
+            <div class="arena-player-char"></div>
+          </div>
+          <div class="arena-vs">VS</div>
+          <div class="arena-player-slot" id="arenaPlayer2">
+            <div style="font-size: 40px;">👤</div>
+            <div class="arena-player-name">Bekleniyor...</div>
+            <div class="arena-player-char"></div>
+          </div>
+        </div>
+        
+        <div class="arena-countdown" id="arenaCountdown">3</div>
+        
+        <div id="arenaLobbyButtons">
+          <button class="arena-ready-btn" id="arenaReadyBtn">✓ Hazırım!</button>
+          <button class="arena-btn secondary" id="arenaLeaveRoom">🚪 Odadan Ayrıl</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2067,6 +2340,22 @@
   const dojoAirDash = document.getElementById('dojoAirDash');
   const dojoClose = document.getElementById('dojoClose');
 
+  // Arena elements
+  const arenaBtn = document.getElementById('arenaBtn');
+  const arenaOverlay = document.getElementById('arenaOverlay');
+  const arenaMenu = document.getElementById('arenaMenu');
+  const arenaLobby = document.getElementById('arenaLobby');
+  const arenaRoomList = document.getElementById('arenaRoomList');
+  const arenaCreateRoom = document.getElementById('arenaCreateRoom');
+  const arenaClose = document.getElementById('arenaClose');
+  const arenaRoomCode = document.getElementById('arenaRoomCode');
+  const arenaPlayer1 = document.getElementById('arenaPlayer1');
+  const arenaPlayer2 = document.getElementById('arenaPlayer2');
+  const arenaReadyBtn = document.getElementById('arenaReadyBtn');
+  const arenaLeaveRoom = document.getElementById('arenaLeaveRoom');
+  const arenaCountdown = document.getElementById('arenaCountdown');
+  const arenaLobbyButtons = document.getElementById('arenaLobbyButtons');
+
   // Permanent bonuses (loaded from Firebase)
   let permBonuses = {
     doubleJump: false,
@@ -2210,6 +2499,48 @@
 
     scaleX: 1,
     scaleY: 1
+  };
+
+  // ===== ARENA STATE =====
+  let arenaState = {
+    active: false,
+    roomId: null,
+    isHost: false,
+    ready: false,
+    opponentReady: false,
+    countdown: 0,
+    inMatch: false,
+    listener: null, // Firebase listener reference
+    
+    // Match state
+    player: {
+      x: 100,
+      y: 400,
+      hp: 100,
+      maxHp: 100,
+      vx: 0,
+      vy: 0,
+      facingRight: true,
+      attacking: false,
+      attackTimer: 0,
+      skillXCooldown: 0,
+      skillFCooldown: 0,
+      stunned: 0,
+      invincible: 0
+    },
+    opponent: {
+      x: 380,
+      y: 400,
+      hp: 100,
+      maxHp: 100,
+      charKey: null,
+      name: '',
+      facingRight: false
+    },
+    projectiles: [],
+    particles: [],
+    lastUpdate: 0,
+    countdownStarted: false
   };
 
   // ===== SPECIAL ITEMS =====
@@ -3355,6 +3686,1205 @@
   dojoClose.addEventListener('click', () => {
     dojoOverlay.classList.remove('active');
   });
+
+  // ===== ARENA FUNCTIONS =====
+  
+  // Generate random room code
+  function generateRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+
+  // Open arena overlay
+  arenaBtn.addEventListener('click', () => {
+    if (!selectedChar) {
+      alert('Önce bir karakter seç!');
+      return;
+    }
+    arenaOverlay.classList.add('active');
+    arenaMenu.style.display = 'block';
+    arenaLobby.classList.remove('active');
+    loadArenaRooms();
+  });
+
+  arenaClose.addEventListener('click', () => {
+    arenaOverlay.classList.remove('active');
+  });
+
+  // Load arena rooms from Firebase
+  async function loadArenaRooms() {
+    arenaRoomList.innerHTML = '<div class="arena-no-rooms">Yükleniyor...</div>';
+    
+    try {
+      const response = await fetch(`${FIREBASE_URL}/arena.json`);
+      const data = await response.json();
+      
+      if (!data) {
+        arenaRoomList.innerHTML = '<div class="arena-no-rooms">Henüz oda yok. İlk sen oluştur!</div>';
+        return;
+      }
+      
+      // Filter only waiting rooms
+      const rooms = Object.entries(data).filter(([id, room]) => 
+        room && room.status === 'waiting' && room.host
+      );
+      
+      if (rooms.length === 0) {
+        arenaRoomList.innerHTML = '<div class="arena-no-rooms">Bekleyen oda yok. Yeni bir oda oluştur!</div>';
+        return;
+      }
+      
+      arenaRoomList.innerHTML = '';
+      rooms.forEach(([roomId, room]) => {
+        const roomEl = document.createElement('div');
+        roomEl.className = 'arena-room-item';
+        roomEl.innerHTML = `
+          <div class="arena-room-info">
+            <div class="arena-room-host">${room.host.name}</div>
+            <div class="arena-room-char">${CHARACTERS[room.host.charKey]?.name || room.host.charKey}</div>
+          </div>
+          <div class="arena-room-status waiting">Bekliyor</div>
+        `;
+        roomEl.addEventListener('click', () => joinArenaRoom(roomId, room));
+        arenaRoomList.appendChild(roomEl);
+      });
+    } catch (err) {
+      console.error('Failed to load arena rooms:', err);
+      arenaRoomList.innerHTML = '<div class="arena-no-rooms">Bağlantı hatası!</div>';
+    }
+  }
+
+  // Create a new arena room
+  arenaCreateRoom.addEventListener('click', async () => {
+    if (!selectedChar || !currentUser) {
+      alert('Önce giriş yap ve karakter seç!');
+      return;
+    }
+    
+    const roomId = generateRoomCode();
+    
+    const roomData = {
+      host: {
+        name: currentUser.username,
+        charKey: selectedChar,
+        ready: false,
+        hp: 100,
+        x: 100,
+        y: 400
+      },
+      guest: null,
+      status: 'waiting',
+      createdAt: Date.now()
+    };
+    
+    try {
+      await fetch(`${FIREBASE_URL}/arena/${roomId}.json`, {
+        method: 'PUT',
+        body: JSON.stringify(roomData)
+      });
+      
+      arenaState.roomId = roomId;
+      arenaState.isHost = true;
+      arenaState.ready = false;
+      
+      enterArenaLobby(roomId, roomData, true);
+    } catch (err) {
+      console.error('Failed to create room:', err);
+      alert('Oda oluşturulamadı!');
+    }
+  });
+
+  // Join an existing room
+  async function joinArenaRoom(roomId, room) {
+    if (!selectedChar || !currentUser) {
+      alert('Önce giriş yap ve karakter seç!');
+      return;
+    }
+    
+    // Check if room still exists and is waiting
+    try {
+      const response = await fetch(`${FIREBASE_URL}/arena/${roomId}.json`);
+      const currentRoom = await response.json();
+      
+      if (!currentRoom || currentRoom.status !== 'waiting') {
+        alert('Bu oda artık mevcut değil!');
+        loadArenaRooms();
+        return;
+      }
+      
+      if (currentRoom.guest) {
+        alert('Bu oda dolu!');
+        loadArenaRooms();
+        return;
+      }
+      
+      // Join the room
+      const guestData = {
+        name: currentUser.username,
+        charKey: selectedChar,
+        ready: false,
+        hp: 100,
+        x: 380,
+        y: 400
+      };
+      
+      await fetch(`${FIREBASE_URL}/arena/${roomId}/guest.json`, {
+        method: 'PUT',
+        body: JSON.stringify(guestData)
+      });
+      
+      arenaState.roomId = roomId;
+      arenaState.isHost = false;
+      arenaState.ready = false;
+      
+      enterArenaLobby(roomId, { ...currentRoom, guest: guestData }, false);
+    } catch (err) {
+      console.error('Failed to join room:', err);
+      alert('Odaya katılınamadı!');
+    }
+  }
+
+  // Enter the lobby
+  function enterArenaLobby(roomId, room, isHost) {
+    arenaMenu.style.display = 'none';
+    arenaLobby.classList.add('active');
+    arenaRoomCode.textContent = `Oda Kodu: ${roomId}`;
+    arenaCountdown.classList.remove('active');
+    arenaLobbyButtons.style.display = 'block';
+    arenaReadyBtn.textContent = '✓ Hazırım!';
+    arenaReadyBtn.classList.remove('ready');
+    arenaState.countdownStarted = false; // Reset countdown flag
+    
+    updateLobbyPlayers(room);
+    
+    // Start listening to room changes
+    startRoomListener(roomId);
+  }
+
+  // Update lobby player slots
+  function updateLobbyPlayers(room) {
+    // Host
+    if (room.host) {
+      arenaPlayer1.classList.add('filled');
+      arenaPlayer1.classList.toggle('ready', room.host.ready);
+      arenaPlayer1.innerHTML = `
+        <div style="font-size: 40px;">⚔️</div>
+        <div class="arena-player-name">${room.host.name}</div>
+        <div class="arena-player-char">${CHARACTERS[room.host.charKey]?.name || room.host.charKey}</div>
+        ${room.host.ready ? '<div style="color: #4ade80; font-size: 12px;">✓ Hazır</div>' : ''}
+      `;
+    }
+    
+    // Guest
+    if (room.guest) {
+      arenaPlayer2.classList.add('filled');
+      arenaPlayer2.classList.toggle('ready', room.guest.ready);
+      arenaPlayer2.innerHTML = `
+        <div style="font-size: 40px;">⚔️</div>
+        <div class="arena-player-name">${room.guest.name}</div>
+        <div class="arena-player-char">${CHARACTERS[room.guest.charKey]?.name || room.guest.charKey}</div>
+        ${room.guest.ready ? '<div style="color: #4ade80; font-size: 12px;">✓ Hazır</div>' : ''}
+      `;
+    } else {
+      arenaPlayer2.classList.remove('filled', 'ready');
+      arenaPlayer2.innerHTML = `
+        <div style="font-size: 40px;">👤</div>
+        <div class="arena-player-name">Bekleniyor...</div>
+        <div class="arena-player-char"></div>
+      `;
+    }
+  }
+
+  // Start listening to room changes
+  function startRoomListener(roomId) {
+    // Stop any existing listener
+    if (arenaState.listener) {
+      clearInterval(arenaState.listener);
+    }
+    
+    // Poll for changes every 500ms
+    arenaState.listener = setInterval(async () => {
+      try {
+        const response = await fetch(`${FIREBASE_URL}/arena/${roomId}.json`);
+        const room = await response.json();
+        
+        console.log('Room state:', room); // DEBUG
+        
+        if (!room) {
+          // Room deleted
+          alert('Oda silindi!');
+          leaveArenaRoom();
+          return;
+        }
+        
+        updateLobbyPlayers(room);
+        
+        // Check if both players are ready
+        if (room.host?.ready && room.guest?.ready && room.status === 'waiting') {
+          console.log('Both players ready! Starting countdown...'); // DEBUG
+          // Start countdown - only once
+          if (!arenaState.countdownStarted && !arenaState.inMatch) {
+            arenaState.countdownStarted = true;
+            startArenaCountdown(roomId, room);
+          }
+        }
+        
+        // Check if match started
+        if (room.status === 'playing' && !arenaState.inMatch) {
+          console.log('Match starting!'); // DEBUG
+          startArenaMatch(roomId, room);
+        }
+        
+      } catch (err) {
+        console.error('Room listener error:', err);
+      }
+    }, 500);
+  }
+
+  // Ready button
+  arenaReadyBtn.addEventListener('click', async () => {
+    if (!arenaState.roomId) return;
+    
+    arenaState.ready = !arenaState.ready;
+    
+    const playerPath = arenaState.isHost ? 'host' : 'guest';
+    
+    try {
+      await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}/ready.json`, {
+        method: 'PUT',
+        body: JSON.stringify(arenaState.ready)
+      });
+      
+      arenaReadyBtn.textContent = arenaState.ready ? '✗ İptal' : '✓ Hazırım!';
+      arenaReadyBtn.classList.toggle('ready', arenaState.ready);
+    } catch (err) {
+      console.error('Failed to update ready state:', err);
+    }
+  });
+
+  // Leave room
+  arenaLeaveRoom.addEventListener('click', () => {
+    leaveArenaRoom();
+  });
+
+  async function leaveArenaRoom() {
+    if (arenaState.listener) {
+      clearInterval(arenaState.listener);
+      arenaState.listener = null;
+    }
+    
+    if (arenaState.roomId) {
+      try {
+        if (arenaState.isHost) {
+          // Delete the room
+          await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}.json`, {
+            method: 'DELETE'
+          });
+        } else {
+          // Remove guest
+          await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/guest.json`, {
+            method: 'DELETE'
+          });
+        }
+      } catch (err) {
+        console.error('Failed to leave room:', err);
+      }
+    }
+    
+    arenaState.roomId = null;
+    arenaState.isHost = false;
+    arenaState.ready = false;
+    arenaState.inMatch = false;
+    arenaState.countdownStarted = false;
+    
+    arenaLobby.classList.remove('active');
+    arenaMenu.style.display = 'block';
+    loadArenaRooms();
+  }
+
+  // Start countdown when both ready
+  async function startArenaCountdown(roomId, room) {
+    arenaLobbyButtons.style.display = 'none';
+    arenaCountdown.classList.add('active');
+    
+    let count = 3;
+    arenaCountdown.textContent = count;
+    
+    const countInterval = setInterval(async () => {
+      count--;
+      if (count > 0) {
+        arenaCountdown.textContent = count;
+      } else {
+        clearInterval(countInterval);
+        arenaCountdown.textContent = 'SAVAŞ!';
+        
+        // Host sets status to playing
+        if (arenaState.isHost) {
+          await fetch(`${FIREBASE_URL}/arena/${roomId}/status.json`, {
+            method: 'PUT',
+            body: JSON.stringify('playing')
+          });
+        }
+      }
+    }, 1000);
+  }
+
+  // Start the arena match
+  function startArenaMatch(roomId, room) {
+    console.log('Starting arena match!'); // DEBUG
+    arenaState.inMatch = true;
+    arenaOverlay.classList.remove('active');
+    
+    // Show game screen with canvas
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens.game.classList.add('active');
+    
+    // Set up arena match state
+    const myData = arenaState.isHost ? room.host : room.guest;
+    const oppData = arenaState.isHost ? room.guest : room.host;
+    
+    arenaState.player = {
+      x: arenaState.isHost ? 100 : 380,
+      y: 460,
+      hp: 100,
+      maxHp: 100,
+      vx: 0,
+      vy: 0,
+      facingRight: arenaState.isHost,
+      attacking: false,
+      attackTimer: 0,
+      skillXCooldown: 0,
+      skillFCooldown: 0,
+      stunned: 0,
+      invincible: 0,
+      charKey: selectedChar
+    };
+    
+    arenaState.opponent = {
+      x: arenaState.isHost ? 380 : 100,
+      y: 460,
+      hp: 100,
+      maxHp: 100,
+      charKey: oppData.charKey,
+      name: oppData.name,
+      facingRight: !arenaState.isHost
+    };
+    
+    arenaState.projectiles = [];
+    arenaState.particles = [];
+    arenaState.active = true;
+    arenaLastTime = performance.now();
+    
+    // Start arena game loop
+    console.log('Starting arena game loop'); // DEBUG
+    requestAnimationFrame(arenaGameLoop);
+  }
+
+  // Arena game loop
+  let arenaLastTime = 0;
+  function arenaGameLoop(timestamp) {
+    if (!arenaState.active) return;
+    
+    const dt = Math.min((timestamp - arenaLastTime) / 1000, 0.05);
+    arenaLastTime = timestamp;
+    
+    updateArena(dt);
+    drawArena();
+    syncArenaState();
+    
+    requestAnimationFrame(arenaGameLoop);
+  }
+
+  // Arena input state
+  const arenaKeys = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    x: false,
+    c: false
+  };
+
+  // Arena keyboard controls
+  document.addEventListener('keydown', (e) => {
+    if (!arenaState.active) return;
+    
+    if (e.key === 'ArrowLeft' || e.key === 'a') arenaKeys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') arenaKeys.right = true;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') arenaKeys.up = true;
+    if (e.key === 'ArrowDown' || e.key === 's') arenaKeys.down = true;
+    if (e.key === 'x' || e.key === 'X') {
+      arenaKeys.x = true;
+      arenaUseSkillX();
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      arenaKeys.c = true;
+      arenaUseSkillF();
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') arenaKeys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') arenaKeys.right = false;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') arenaKeys.up = false;
+    if (e.key === 'ArrowDown' || e.key === 's') arenaKeys.down = false;
+    if (e.key === 'x' || e.key === 'X') arenaKeys.x = false;
+    if (e.key === 'c' || e.key === 'C') arenaKeys.c = false;
+  });
+
+  // Arena update
+  function updateArena(dt) {
+    // Update time for animations
+    G.t += dt;
+    
+    const p = arenaState.player;
+    
+    // Movement
+    if (p.stunned <= 0) {
+      if (arenaKeys.left) {
+        p.vx = -300;
+        p.facingRight = false;
+      } else if (arenaKeys.right) {
+        p.vx = 300;
+        p.facingRight = true;
+      } else {
+        p.vx *= 0.8;
+      }
+      
+      // Jump
+      if (arenaKeys.up && p.y >= 460) {
+        p.vy = -600;
+      }
+    }
+    
+    // Gravity
+    p.vy += 1500 * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    
+    // Bounds
+    if (p.x < 20) p.x = 20;
+    if (p.x > 460) p.x = 460;
+    if (p.y > 460) {
+      p.y = 460;
+      p.vy = 0;
+    }
+    
+    // Cooldowns
+    if (p.skillXCooldown > 0) p.skillXCooldown -= dt;
+    if (p.skillFCooldown > 0) p.skillFCooldown -= dt;
+    if (p.stunned > 0) p.stunned -= dt;
+    if (p.invincible > 0) p.invincible -= dt;
+    if (p.attackTimer > 0) p.attackTimer -= dt;
+    
+    // Update projectiles
+    arenaState.projectiles = arenaState.projectiles.filter(proj => {
+      proj.x += proj.vx * dt;
+      proj.y += (proj.vy || 0) * dt;
+      proj.life -= dt;
+      
+      // Check collision with opponent
+      if (proj.isPlayer) {
+        const opp = arenaState.opponent;
+        if (Math.abs(proj.x - opp.x) < 40 && Math.abs(proj.y - opp.y) < 60) {
+          // Hit opponent
+          damageOpponent(proj.damage || 10);
+          return false;
+        }
+      }
+      
+      return proj.life > 0 && proj.x > 0 && proj.x < 480;
+    });
+    
+    // Update particles
+    arenaState.particles = arenaState.particles.filter(part => {
+      part.x += part.vx * dt;
+      part.y += part.vy * dt;
+      part.life -= dt;
+      return part.life > 0;
+    });
+  }
+
+  // Use X skill in arena
+  function arenaUseSkillX() {
+    const p = arenaState.player;
+    if (p.skillXCooldown > 0 || p.stunned > 0) return;
+    
+    const char = CHARACTERS[p.charKey];
+    if (!char) return;
+    
+    p.skillXCooldown = char.skillX.cooldown;
+    p.attacking = true;
+    p.attackTimer = 0.3;
+    
+    const projX = p.facingRight ? p.x + 40 : p.x - 40;
+    const projVx = p.facingRight ? 500 : -500;
+    
+    // Create projectile based on character's skill
+    const skillAction = char.skillX.action;
+    let projData = {
+      x: projX,
+      y: p.y - 30,
+      vx: projVx,
+      vy: 0,
+      life: 1.5,
+      damage: 15,
+      isPlayer: true,
+      type: skillAction,
+      color: char.color,
+      radius: 12
+    };
+    
+    // Character-specific projectiles
+    if (skillAction === 'shuriken') {
+      projData.radius = 10;
+      projData.spin = 0;
+      projData.damage = 12;
+    } else if (skillAction === 'spearExtend') {
+      projData.radius = 8;
+      projData.w = 80;
+      projData.h = 6;
+      projData.damage = 18;
+    } else if (skillAction === 'waterBall') {
+      projData.radius = 14;
+      projData.color = '#3498db';
+      projData.damage = 14;
+    } else if (skillAction === 'katanaSlash') {
+      projData.radius = 20;
+      projData.color = '#e0e0e0';
+      projData.damage = 20;
+      projData.life = 0.3;
+      projData.vx = projVx * 0.5;
+    } else if (skillAction === 'punch') {
+      projData.radius = 18;
+      projData.color = '#f39c12';
+      projData.damage = 22;
+      projData.life = 0.25;
+      projData.vx = projVx * 0.3;
+    } else if (skillAction === 'poisonSpit') {
+      projData.color = '#2ecc71';
+      projData.damage = 10;
+    } else if (skillAction === 'animalCall') {
+      projData.color = '#8b4513';
+      projData.radius = 8;
+      projData.damage = 8;
+      // Multiple small projectiles
+      for (let i = 0; i < 3; i++) {
+        arenaState.projectiles.push({
+          ...projData,
+          y: p.y - 30 + (i - 1) * 20,
+          vx: projVx * (0.8 + i * 0.1)
+        });
+      }
+      return;
+    } else if (skillAction === 'illusionKill') {
+      projData.color = '#9b59b6';
+      projData.radius = 16;
+      projData.damage = 16;
+    } else if (skillAction === 'windWave') {
+      projData.color = '#87ceeb';
+      projData.radius = 18;
+      projData.damage = 14;
+    } else if (skillAction === 'crowFeather') {
+      projData.color = '#2c3e50';
+      projData.radius = 10;
+      projData.damage = 12;
+    } else if (skillAction === 'paperThrow') {
+      projData.color = '#ecf0f1';
+      projData.radius = 8;
+      projData.damage = 10;
+      projData.vx = projVx * 1.2;
+    } else if (skillAction === 'kissThrow') {
+      projData.color = '#ff69b4';
+      projData.radius = 12;
+      projData.damage = 14;
+    } else if (skillAction === 'arrowShot') {
+      projData.color = '#fff';
+      projData.radius = 6;
+      projData.damage = 16;
+      projData.vx = projVx * 1.4;
+    } else if (skillAction === 'kunaiThrow') {
+      projData.color = '#555';
+      projData.radius = 8;
+      projData.damage = 14;
+      projData.vx = projVx * 1.3;
+    }
+    
+    arenaState.projectiles.push(projData);
+    
+    // Particles
+    for (let i = 0; i < 8; i++) {
+      arenaState.particles.push({
+        x: projX,
+        y: p.y - 30,
+        vx: rand(-50, 50) + projVx * 0.3,
+        vy: rand(-80, 80),
+        life: rand(0.2, 0.4),
+        color: char.color
+      });
+    }
+  }
+
+  // Use F skill (ultimate) in arena
+  function arenaUseSkillF() {
+    const p = arenaState.player;
+    if (p.skillFCooldown > 0 || p.stunned > 0) return;
+    
+    const char = CHARACTERS[p.charKey];
+    if (!char) return;
+    
+    p.skillFCooldown = char.skillF.cooldown;
+    
+    const projX = p.facingRight ? p.x + 40 : p.x - 40;
+    const projVx = p.facingRight ? 350 : -350;
+    
+    const skillAction = char.skillF.action;
+    
+    // Character-specific ultimate projectiles
+    if (skillAction === 'eagleFlight') {
+      // Ringo: Big eagle projectile
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx, vy: 0,
+        life: 2.5, damage: 40, isPlayer: true,
+        type: 'eagle', color: '#8b5cf6', radius: 30
+      });
+    } else if (skillAction === 'moonlight') {
+      // Haru: Beam of light
+      for (let i = 0; i < 5; i++) {
+        arenaState.projectiles.push({
+          x: projX + i * 30, y: p.y - 30 + (i - 2) * 15,
+          vx: projVx, vy: 0, life: 1.5, damage: 15,
+          isPlayer: true, type: 'moonlight', color: '#fff', radius: 15
+        });
+      }
+    } else if (skillAction === 'iceStorm') {
+      // Usagi: Multiple ice shards
+      for (let i = 0; i < 8; i++) {
+        arenaState.projectiles.push({
+          x: projX, y: p.y - 30,
+          vx: projVx * (0.7 + Math.random() * 0.6),
+          vy: rand(-200, 200),
+          life: 2, damage: 12, isPlayer: true,
+          type: 'ice', color: '#67e8f9', radius: 10
+        });
+      }
+    } else if (skillAction === 'swordStorm') {
+      // Chisa: Spinning sword wave
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx * 0.8, vy: 0,
+        life: 2, damage: 50, isPlayer: true,
+        type: 'swordStorm', color: '#e74c3c', radius: 35
+      });
+    } else if (skillAction === 'headbutt') {
+      // Butsuo: Charging attack
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 20, vx: projVx * 1.5, vy: 0,
+        life: 1.5, damage: 55, isPlayer: true,
+        type: 'headbutt', color: '#ecf0f1', radius: 40
+      });
+    } else if (skillAction === 'poisonArmor') {
+      // Teki: Poison cloud
+      for (let i = 0; i < 6; i++) {
+        arenaState.projectiles.push({
+          x: projX + rand(-30, 30), y: p.y - 30 + rand(-30, 30),
+          vx: projVx * 0.5, vy: rand(-50, 50),
+          life: 3, damage: 8, isPlayer: true,
+          type: 'poison', color: '#2ecc71', radius: 18
+        });
+      }
+    } else if (skillAction === 'animalFriends') {
+      // Susumu: Animal stampede
+      for (let i = 0; i < 4; i++) {
+        arenaState.projectiles.push({
+          x: projX - i * 40, y: p.y - 20 + rand(-20, 20),
+          vx: projVx * (1 + i * 0.1), vy: 0,
+          life: 2, damage: 15, isPlayer: true,
+          type: 'animal', color: '#8b4513', radius: 20
+        });
+      }
+    } else if (skillAction === 'illusionStorm') {
+      // Shinji: Multiple illusions
+      for (let i = 0; i < 5; i++) {
+        arenaState.projectiles.push({
+          x: projX, y: p.y - 30 + (i - 2) * 25,
+          vx: projVx, vy: rand(-30, 30),
+          life: 2, damage: 12, isPlayer: true,
+          type: 'illusion', color: '#9b59b6', radius: 14
+        });
+      }
+    } else if (skillAction === 'windSword') {
+      // Kazuya: Giant wind blade
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx * 1.2, vy: 0,
+        life: 2, damage: 45, isPlayer: true,
+        type: 'windSword', color: '#3498db', radius: 35
+      });
+    } else if (skillAction === 'darkAura') {
+      // Togami: Dark crow attack
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 40, vx: projVx, vy: 0,
+        life: 2.5, damage: 40, isPlayer: true,
+        type: 'darkCrow', color: '#1a1a1a', radius: 30
+      });
+    } else if (skillAction === 'paperWings') {
+      // Kagi: Paper storm
+      for (let i = 0; i < 10; i++) {
+        arenaState.projectiles.push({
+          x: projX + rand(-20, 20), y: p.y - 30 + rand(-40, 40),
+          vx: projVx * (0.8 + Math.random() * 0.4),
+          vy: rand(-100, 100),
+          life: 2, damage: 8, isPlayer: true,
+          type: 'paper', color: '#ecf0f1', radius: 8
+        });
+      }
+    } else if (skillAction === 'fireDragon') {
+      // Akemi: Fire dragon breath
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx, vy: 0,
+        life: 2.5, damage: 50, isPlayer: true,
+        type: 'fireDragon', color: '#e74c3c', radius: 40
+      });
+    } else if (skillAction === 'mysticLightning') {
+      // Ryoken: Lightning bolts
+      for (let i = 0; i < 3; i++) {
+        arenaState.projectiles.push({
+          x: projX, y: p.y - 30,
+          vx: projVx * (1 + i * 0.2), vy: (i - 1) * 100,
+          life: 1.5, damage: 20, isPlayer: true,
+          type: 'lightning', color: '#f1c40f', radius: 12
+        });
+      }
+    } else if (skillAction === 'arrowRain') {
+      // Riku: Arrow rain
+      for (let i = 0; i < 8; i++) {
+        arenaState.projectiles.push({
+          x: projX + i * 10, y: p.y - 60 - i * 20,
+          vx: projVx * 0.8, vy: 200 + i * 30,
+          life: 2, damage: 10, isPlayer: true,
+          type: 'arrow', color: '#fff', radius: 6
+        });
+      }
+    } else if (skillAction === 'shadowClone') {
+      // Joaryu: Shadow clones attack
+      for (let i = 0; i < 3; i++) {
+        arenaState.projectiles.push({
+          x: projX, y: p.y - 30 + (i - 1) * 30,
+          vx: projVx * (0.9 + i * 0.1), vy: 0,
+          life: 2, damage: 18, isPlayer: true,
+          type: 'shadowClone', color: '#8e44ad', radius: 20
+        });
+      }
+    } else {
+      // Default ultimate
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx, vy: 0,
+        life: 2, damage: 35, isPlayer: true,
+        type: 'ultimate', color: char.color, radius: 25
+      });
+    }
+    
+    // Big particle burst
+    for (let i = 0; i < 20; i++) {
+      arenaState.particles.push({
+        x: projX,
+        y: p.y - 30,
+        vx: rand(-150, 150) + projVx * 0.2,
+        vy: rand(-150, 150),
+        life: rand(0.3, 0.6),
+        color: char.color
+      });
+    }
+  }
+
+  // Damage opponent
+  async function damageOpponent(damage) {
+    arenaState.opponent.hp -= damage;
+    
+    // Sync damage to Firebase
+    if (arenaState.roomId) {
+      const oppPath = arenaState.isHost ? 'guest' : 'host';
+      try {
+        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/hp.json`, {
+          method: 'PUT',
+          body: JSON.stringify(Math.max(0, arenaState.opponent.hp))
+        });
+      } catch (err) {
+        console.error('Failed to sync damage:', err);
+      }
+    }
+    
+    // Check for win
+    if (arenaState.opponent.hp <= 0) {
+      endArenaMatch(true);
+    }
+  }
+
+  // Sync player state to Firebase
+  let lastSyncTime = 0;
+  async function syncArenaState() {
+    if (!arenaState.roomId || !arenaState.active) return;
+    
+    const now = Date.now();
+    if (now - lastSyncTime < 100) return; // Sync every 100ms
+    lastSyncTime = now;
+    
+    const playerPath = arenaState.isHost ? 'host' : 'guest';
+    const p = arenaState.player;
+    
+    try {
+      await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          x: p.x,
+          y: p.y,
+          hp: p.hp,
+          facingRight: p.facingRight
+        })
+      });
+      
+      // Also fetch opponent state and room status
+      const oppPath = arenaState.isHost ? 'guest' : 'host';
+      const [oppResponse, roomResponse] = await Promise.all([
+        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}.json`),
+        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/status.json`)
+      ]);
+      const oppData = await oppResponse.json();
+      const roomStatus = await roomResponse.json();
+      
+      // Check if match was ended by opponent
+      if (roomStatus === 'finished') {
+        // Opponent ended the match - we lost
+        endArenaMatch(false);
+        return;
+      }
+      
+      if (oppData) {
+        arenaState.opponent.x = oppData.x || arenaState.opponent.x;
+        arenaState.opponent.y = oppData.y || arenaState.opponent.y;
+        arenaState.opponent.hp = oppData.hp ?? arenaState.opponent.hp;
+        
+        // Check if opponent's HP is 0 (we won)
+        if (arenaState.opponent.hp <= 0) {
+          endArenaMatch(true);
+          return;
+        }
+        
+        // Check if we lost
+        if (arenaState.player.hp <= 0) {
+          endArenaMatch(false);
+        }
+      }
+    } catch (err) {
+      // Room might be deleted - match ended
+      if (!arenaState.active) return;
+      console.error('Sync error:', err);
+    }
+  }
+
+  // End arena match
+  async function endArenaMatch(won) {
+    if (!arenaState.active) return; // Prevent double calls
+    arenaState.active = false;
+    
+    if (arenaState.listener) {
+      clearInterval(arenaState.listener);
+      arenaState.listener = null;
+    }
+    
+    // Mark room as finished in Firebase so opponent knows
+    if (arenaState.roomId && won) {
+      try {
+        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/status.json`, {
+          method: 'PUT',
+          body: JSON.stringify('finished')
+        });
+      } catch (err) {
+        console.error('Error marking room finished:', err);
+      }
+    }
+    
+    // Show result on canvas
+    const resultText = won ? '🏆 KAZANDIN!' : '💀 KAYBETTİN!';
+    
+    // Draw result overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = won ? '#ffd700' : '#ff4444';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(resultText, canvas.width / 2, canvas.height / 2 - 30);
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('Devam etmek için tıkla', canvas.width / 2, canvas.height / 2 + 30);
+    
+    // Wait for click to continue
+    const handleClick = () => {
+      canvas.removeEventListener('click', handleClick);
+      
+      // Clean up room
+      if (arenaState.roomId) {
+        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}.json`, {
+          method: 'DELETE'
+        }).catch(() => {});
+      }
+      
+      arenaState.roomId = null;
+      arenaState.isHost = false;
+      arenaState.ready = false;
+      arenaState.inMatch = false;
+      arenaState.countdownStarted = false;
+      
+      // Go back to character select
+      showScreen('charSelect');
+    };
+    
+    setTimeout(() => {
+      canvas.addEventListener('click', handleClick);
+    }, 500);
+  }
+
+  // Draw arena
+  function drawArena() {
+    // Forest background (from LOCATIONS.forest)
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#87ceeb');
+    grad.addColorStop(0.4, '#98d8c8');
+    grad.addColorStop(0.7, '#2d5016');
+    grad.addColorStop(1, '#1a3009');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Sun
+    ctx.fillStyle = '#fff8dc';
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 40;
+    ctx.beginPath();
+    ctx.arc(400, 80, 35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Background trees
+    drawArenaTrees();
+    
+    // Arena ground (forest floor)
+    ctx.fillStyle = 'rgba(34,100,34,0.9)';
+    ctx.fillRect(0, 460, 480, 180);
+    
+    // Grass details
+    ctx.strokeStyle = '#228b22';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 30; i++) {
+      const gx = i * 16 + Math.sin(G.t * 2 + i) * 3;
+      ctx.beginPath();
+      ctx.moveTo(gx, 460);
+      ctx.lineTo(gx + 3, 450 + Math.sin(G.t * 3 + i) * 3);
+      ctx.stroke();
+    }
+    
+    // Arena center line
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath();
+    ctx.moveTo(240, 380);
+    ctx.lineTo(240, 460);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Draw players using the main game's drawPlayer function
+    // Save original values
+    const origP = { x: P.x, y: P.y, w: P.w, h: P.h, onGround: P.onGround, crouching: P.crouching };
+    const origSelectedChar = selectedChar;
+    const origGroundY = G.groundY;
+    
+    // Set arena ground
+    G.groundY = 460;
+    
+    // Draw my character
+    P.x = arenaState.player.x - P.w / 2;
+    P.y = arenaState.player.y;
+    P.onGround = arenaState.player.y >= 460;
+    P.crouching = false;
+    selectedChar = arenaState.player.charKey;
+    
+    // Flip if facing left
+    if (!arenaState.player.facingRight) {
+      ctx.save();
+      ctx.translate(arenaState.player.x * 2, 0);
+      ctx.scale(-1, 1);
+    }
+    drawPlayer();
+    if (!arenaState.player.facingRight) {
+      ctx.restore();
+    }
+    
+    // Draw opponent
+    P.x = arenaState.opponent.x - P.w / 2;
+    P.y = arenaState.opponent.y;
+    P.onGround = arenaState.opponent.y >= 460;
+    selectedChar = arenaState.opponent.charKey;
+    
+    // Flip if facing left
+    if (!arenaState.opponent.facingRight) {
+      ctx.save();
+      ctx.translate(arenaState.opponent.x * 2, 0);
+      ctx.scale(-1, 1);
+    }
+    drawPlayer();
+    if (!arenaState.opponent.facingRight) {
+      ctx.restore();
+    }
+    
+    // Restore original values
+    P.x = origP.x;
+    P.y = origP.y;
+    P.w = origP.w;
+    P.h = origP.h;
+    P.onGround = origP.onGround;
+    P.crouching = origP.crouching;
+    selectedChar = origSelectedChar;
+    G.groundY = origGroundY;
+    
+    // Draw projectiles
+    arenaState.projectiles.forEach(proj => {
+      ctx.save();
+      // Glow effect
+      ctx.shadowColor = proj.color || '#ff6b6b';
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = proj.color || '#ff6b6b';
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, proj.radius || 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner bright core
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, (proj.radius || 12) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    
+    // Draw particles
+    arenaState.particles.forEach(part => {
+      ctx.globalAlpha = Math.min(1, part.life * 2);
+      ctx.fillStyle = part.color || '#fff';
+      ctx.beginPath();
+      ctx.arc(part.x, part.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    
+    // Draw name tags
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    
+    // My name
+    ctx.fillStyle = '#4ade80';
+    ctx.strokeText('SEN', arenaState.player.x, arenaState.player.y - 80);
+    ctx.fillText('SEN', arenaState.player.x, arenaState.player.y - 80);
+    
+    // Opponent name
+    ctx.fillStyle = '#ff6b6b';
+    ctx.strokeText(arenaState.opponent.name, arenaState.opponent.x, arenaState.opponent.y - 80);
+    ctx.fillText(arenaState.opponent.name, arenaState.opponent.x, arenaState.opponent.y - 80);
+    
+    // Draw HP bars
+    drawArenaHPBar(arenaState.player, 20, 20, true);
+    drawArenaHPBar(arenaState.opponent, 260, 20, false);
+    
+    // Draw skill cooldowns
+    drawArenaSkillUI();
+  }
+
+  // Draw background trees for arena
+  function drawArenaTrees() {
+    // Back layer trees (darker, smaller)
+    ctx.fillStyle = '#1a4d1a';
+    for (let i = 0; i < 8; i++) {
+      const tx = i * 70 + 20;
+      const ty = 350;
+      // Tree trunk
+      ctx.fillStyle = '#4a3728';
+      ctx.fillRect(tx - 8, ty, 16, 110);
+      // Tree top
+      ctx.fillStyle = '#1a4d1a';
+      ctx.beginPath();
+      ctx.moveTo(tx, ty - 80);
+      ctx.lineTo(tx - 40, ty + 20);
+      ctx.lineTo(tx + 40, ty + 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(tx, ty - 50);
+      ctx.lineTo(tx - 35, ty + 40);
+      ctx.lineTo(tx + 35, ty + 40);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Draw HP bar
+  function drawArenaHPBar(player, x, y, isMe) {
+    const barWidth = 200;
+    const barHeight = 20;
+    const hpPercent = Math.max(0, player.hp / player.maxHp);
+    
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x, y, barWidth, barHeight);
+    
+    // HP
+    ctx.fillStyle = isMe ? '#4ade80' : '#ff6b6b';
+    ctx.fillRect(x + 2, y + 2, (barWidth - 4) * hpPercent, barHeight - 4);
+    
+    // Border
+    ctx.strokeStyle = isMe ? '#4ade80' : '#ff6b6b';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, barWidth, barHeight);
+    
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.max(0, Math.round(player.hp))} / ${player.maxHp}`, x + barWidth / 2, y + 15);
+  }
+
+  // Draw skill UI
+  function drawArenaSkillUI() {
+    const p = arenaState.player;
+    const char = CHARACTERS[p.charKey];
+    if (!char) return;
+    
+    // X skill
+    ctx.fillStyle = p.skillXCooldown > 0 ? 'rgba(100,100,100,0.8)' : 'rgba(255,100,100,0.8)';
+    ctx.fillRect(160, 590, 70, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('[X] ' + char.skillX.icon, 195, 610);
+    if (p.skillXCooldown > 0) {
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(p.skillXCooldown.toFixed(1) + 's', 195, 625);
+    }
+    
+    // C skill
+    ctx.fillStyle = p.skillFCooldown > 0 ? 'rgba(100,100,100,0.8)' : 'rgba(168,85,247,0.8)';
+    ctx.fillRect(250, 590, 70, 40);
+    ctx.fillStyle = '#fff';
+    ctx.fillText('[C] ' + char.skillF.icon, 285, 610);
+    if (p.skillFCooldown > 0) {
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(p.skillFCooldown.toFixed(1) + 's', 285, 625);
+    }
+  }
 
   // Check if already logged in
   (async function checkSavedLogin() {
