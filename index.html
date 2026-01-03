@@ -4367,6 +4367,39 @@
     arenaState.active = true;
     arenaLastTime = performance.now();
     
+    // Start real-time listener for opponent state using Firebase SDK
+    const oppPath = arenaState.isHost ? 'guest' : 'host';
+    arenaState.opponentListener = database.ref(`arena/${roomId}/${oppPath}`).on('value', (snapshot) => {
+      const oppData = snapshot.val();
+      if (oppData && arenaState.active) {
+        arenaState.opponent.targetX = oppData.x ?? arenaState.opponent.targetX;
+        arenaState.opponent.targetY = oppData.y ?? arenaState.opponent.targetY;
+        arenaState.opponent.vx = oppData.vx ?? 0;
+        arenaState.opponent.vy = oppData.vy ?? 0;
+        arenaState.opponent.facingRight = oppData.facingRight ?? arenaState.opponent.facingRight;
+        arenaState.opponent.crouching = oppData.crouching || false;
+        arenaState.opponent.jumping = oppData.jumping || false;
+        arenaState.opponent.attacking = oppData.attacking || false;
+      }
+    });
+    
+    // Listen for damage to our player
+    const myPath = arenaState.isHost ? 'host' : 'guest';
+    arenaState.damageListener = database.ref(`arena/${roomId}/${myPath}/pendingDamage`).on('value', (snapshot) => {
+      const damage = snapshot.val();
+      if (damage && damage > 0 && arenaState.active) {
+        console.log('💥 Received damage from Firebase:', damage);
+        arenaState.player.hp -= damage;
+        // Clear the pending damage
+        database.ref(`arena/${roomId}/${myPath}/pendingDamage`).set(0);
+        
+        if (arenaState.player.hp <= 0) {
+          arenaState.player.hp = 0;
+          endArenaMatch(false);
+        }
+      }
+    });
+    
     // Start arena game loop
     console.log('Starting arena game loop'); // DEBUG
     requestAnimationFrame(arenaGameLoop);
@@ -4829,21 +4862,16 @@
       return;
     }
     
-    // Fallback to Firebase - write pendingDamage for opponent to read
-    console.log('📤 Sending damage via Firebase fallback');
+    // Fallback to Firebase SDK - write pendingDamage for opponent to read
+    console.log('📤 Sending damage via Firebase SDK');
     arenaState.opponent.hp -= damage; // Local prediction
     
     if (arenaState.roomId) {
-      const myPath = arenaState.isHost ? 'host' : 'guest';
       const oppPath = arenaState.isHost ? 'guest' : 'host';
       try {
-        // Write damage to opponent's pendingDamage field
-        const response = await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/pendingDamage.json`);
-        const currentDamage = await response.json() || 0;
-        
-        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/pendingDamage.json`, {
-          method: 'PUT',
-          body: JSON.stringify(currentDamage + damage)
+        // Use transaction to safely add damage
+        database.ref(`arena/${arenaState.roomId}/${oppPath}/pendingDamage`).transaction((current) => {
+          return (current || 0) + damage;
         });
       } catch (err) {
         console.error('Failed to sync damage:', err);
@@ -4886,75 +4914,26 @@
     }
     
     // Fallback to Firebase (slower, only if WebRTC not available)
-    // Note: already throttled at 16ms above, use 100ms for Firebase
-    if (now - (arenaState.lastFirebaseSync || 0) < 100) return;
+    // Note: already throttled at 16ms above, use 50ms for Firebase SDK writes
+    if (now - (arenaState.lastFirebaseSync || 0) < 50) return;
     arenaState.lastFirebaseSync = now;
     
     const playerPath = arenaState.isHost ? 'host' : 'guest';
     
+    // Use Firebase SDK for faster writes
     try {
-      await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          x: Math.round(p.x),
-          y: Math.round(p.y),
-          vx: Math.round(p.vx || 0),
-          vy: Math.round(p.vy || 0),
-          hp: p.hp,
-          facingRight: p.facingRight,
-          crouching: arenaKeys.down,
-          jumping: p.y < 460,
-          attacking: p.attacking || false
-        })
+      database.ref(`arena/${arenaState.roomId}/${playerPath}`).update({
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        vx: Math.round(p.vx || 0),
+        vy: Math.round(p.vy || 0),
+        hp: p.hp,
+        facingRight: p.facingRight,
+        crouching: arenaKeys.down,
+        jumping: p.y < 460,
+        attacking: p.attacking || false
       });
-      
-      // Also fetch opponent state, our pending damage, and room status
-      const oppPath = arenaState.isHost ? 'guest' : 'host';
-      const [oppResponse, myDataResponse, roomResponse] = await Promise.all([
-        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}.json`),
-        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}.json`),
-        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/status.json`)
-      ]);
-      const oppData = await oppResponse.json();
-      const myData = await myDataResponse.json();
-      const roomStatus = await roomResponse.json();
-      
-      // Check if match was ended by opponent
-      if (roomStatus === 'finished') {
-        endArenaMatch(false);
-        return;
-      }
-      
-      // Check for pending damage from opponent
-      if (myData?.pendingDamage && myData.pendingDamage > 0) {
-        arenaState.player.hp -= myData.pendingDamage;
-        console.log('Received damage:', myData.pendingDamage, 'HP now:', arenaState.player.hp);
-        
-        // Clear pending damage
-        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}/pendingDamage.json`, {
-          method: 'PUT',
-          body: JSON.stringify(0)
-        });
-        
-        if (arenaState.player.hp <= 0) {
-          arenaState.player.hp = 0;
-          endArenaMatch(false);
-          return;
-        }
-      }
-      
-      if (oppData) {
-        arenaState.opponent.targetX = oppData.x ?? arenaState.opponent.targetX;
-        arenaState.opponent.targetY = oppData.y ?? arenaState.opponent.targetY;
-        arenaState.opponent.vx = oppData.vx ?? 0;
-        arenaState.opponent.vy = oppData.vy ?? 0;
-        arenaState.opponent.facingRight = oppData.facingRight ?? arenaState.opponent.facingRight;
-        arenaState.opponent.crouching = oppData.crouching || false;
-        arenaState.opponent.jumping = oppData.jumping || false;
-        arenaState.opponent.attacking = oppData.attacking || false;
-        
-        // Don't override opponent HP from Firebase - we track it locally from damage
-      }
+      // Opponent data is received via real-time listener in startArenaMatch
     } catch (err) {
       if (!arenaState.active) return;
       console.error('Sync error:', err);
@@ -4965,6 +4944,18 @@
   async function endArenaMatch(won) {
     if (!arenaState.active) return; // Prevent double calls
     arenaState.active = false;
+    
+    // Clean up Firebase real-time listeners
+    if (arenaState.opponentListener) {
+      const oppPath = arenaState.isHost ? 'guest' : 'host';
+      database.ref(`arena/${arenaState.roomId}/${oppPath}`).off('value', arenaState.opponentListener);
+      arenaState.opponentListener = null;
+    }
+    if (arenaState.damageListener) {
+      const myPath = arenaState.isHost ? 'host' : 'guest';
+      database.ref(`arena/${arenaState.roomId}/${myPath}/pendingDamage`).off('value', arenaState.damageListener);
+      arenaState.damageListener = null;
+    }
     
     // Notify opponent via WebRTC
     if (arenaState.isConnected) {
