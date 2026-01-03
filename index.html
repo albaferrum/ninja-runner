@@ -4379,6 +4379,10 @@
         arenaState.opponent.vx = oppData.vx ?? 0;
         arenaState.opponent.vy = oppData.vy ?? 0;
         arenaState.opponent.facingRight = oppData.facingRight ?? arenaState.opponent.facingRight;
+        // Debug crouching sync
+        if (oppData.crouching !== arenaState.opponent.crouching) {
+          console.log('🦵 Opponent crouching changed:', oppData.crouching);
+        }
         arenaState.opponent.crouching = oppData.crouching || false;
         arenaState.opponent.jumping = oppData.jumping || false;
         arenaState.opponent.attacking = oppData.attacking || false;
@@ -4959,34 +4963,113 @@
     const color = char.color;
     
     if (skill.type === 'X') {
-      // Basic skill projectile (visual only, isPlayer = false so no damage)
+      // Basic skill projectile - character specific
       const skillAction = char.skillX?.action || 'default';
-      arenaState.projectiles.push({
-        x: projX,
-        y: y - 30,
-        vx: projVx,
-        vy: 0,
-        life: 1.5,
-        damage: 0, // No damage - opponent handles hit detection
-        isPlayer: false,
-        type: skillAction,
-        color: color,
-        radius: 12
-      });
+      let projData = {
+        x: projX, y: y - 30, vx: projVx, vy: 0,
+        life: 1.5, damage: 0, isPlayer: false,
+        type: skillAction, color: color, radius: 12
+      };
+      
+      // Character-specific adjustments
+      if (skillAction === 'shuriken') {
+        projData.radius = 10;
+      } else if (skillAction === 'spearExtend') {
+        projData.radius = 8; projData.w = 80; projData.h = 6;
+      } else if (skillAction === 'waterBall') {
+        projData.radius = 14; projData.color = '#3498db';
+      } else if (skillAction === 'katanaSlash') {
+        projData.radius = 20; projData.color = '#e0e0e0'; projData.life = 0.3; projData.vx = projVx * 0.5;
+      } else if (skillAction === 'punch') {
+        projData.radius = 18; projData.color = '#f39c12'; projData.life = 0.25; projData.vx = projVx * 0.3;
+      } else if (skillAction === 'poisonShot') {
+        projData.color = '#2ecc71'; projData.radius = 12;
+      } else if (skillAction === 'needleThrow') {
+        projData.color = '#c0392b'; projData.radius = 5;
+        for (let i = 0; i < 5; i++) {
+          arenaState.projectiles.push({...projData, y: y - 30 + (i - 2) * 15, vx: projVx * (0.9 + i * 0.05)});
+        }
+        return; // Already pushed all projectiles
+      } else if (skillAction === 'eyeBeam') {
+        projData.color = '#9b59b6'; projData.radius = 14; projData.vx = projVx * 1.2;
+      } else if (skillAction === 'illusionKill') {
+        projData.color = '#9b59b6'; projData.radius = 16;
+      } else if (skillAction === 'windWave') {
+        projData.color = '#87ceeb'; projData.radius = 18;
+      } else if (skillAction === 'crowFeather') {
+        projData.color = '#2c3e50'; projData.radius = 10;
+      } else if (skillAction === 'paperThrow') {
+        projData.color = '#ecf0f1'; projData.radius = 8; projData.vx = projVx * 1.2;
+      } else if (skillAction === 'kissThrow') {
+        projData.color = '#ff69b4'; projData.radius = 12;
+      } else if (skillAction === 'arrowShot') {
+        projData.color = '#fff'; projData.radius = 6; projData.vx = projVx * 1.4;
+      } else if (skillAction === 'kunaiThrow') {
+        projData.color = '#555'; projData.radius = 8; projData.vx = projVx * 1.3;
+      }
+      
+      arenaState.projectiles.push(projData);
     } else if (skill.type === 'F') {
-      // Ultimate skill projectile (visual only)
-      arenaState.projectiles.push({
-        x: projX,
-        y: y - 30,
-        vx: projVx,
-        vy: 0,
-        life: 2,
-        damage: 0,
-        isPlayer: false,
-        type: 'ultimate',
-        color: color,
-        radius: 25
-      });
+      // Ultimate skill - character specific
+      const skillAction = char.skillF?.action || 'default';
+      const ultiVx = facingRight ? 350 : -350;
+      
+      if (skillAction === 'eagleFlight') {
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx, vy: 0, life: 2.5, damage: 0, isPlayer: false, type: 'eagle', color: '#8b5cf6', radius: 30});
+      } else if (skillAction === 'moonlight') {
+        for (let i = 0; i < 5; i++) {
+          arenaState.projectiles.push({x: projX + i * 30, y: y - 30 + (i - 2) * 15, vx: ultiVx, vy: 0, life: 1.5, damage: 0, isPlayer: false, type: 'moonlight', color: '#fff', radius: 15});
+        }
+      } else if (skillAction === 'iceStorm') {
+        for (let i = 0; i < 8; i++) {
+          arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx * (0.7 + Math.random() * 0.6), vy: rand(-200, 200), life: 2, damage: 0, isPlayer: false, type: 'ice', color: '#67e8f9', radius: 10});
+        }
+      } else if (skillAction === 'swordStorm') {
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx * 0.8, vy: 0, life: 2, damage: 0, isPlayer: false, type: 'swordStorm', color: '#e74c3c', radius: 35});
+      } else if (skillAction === 'headbutt') {
+        arenaState.projectiles.push({x: projX, y: y - 20, vx: ultiVx * 1.5, vy: 0, life: 1.5, damage: 0, isPlayer: false, type: 'headbutt', color: '#ecf0f1', radius: 40});
+      } else if (skillAction === 'monkeyFriend') {
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx * 1.2, vy: 0, life: 3, damage: 0, isPlayer: false, type: 'monkey', color: '#8b4513', radius: 25});
+        for (let i = 0; i < 4; i++) {
+          setTimeout(() => {
+            if (!arenaState.active) return;
+            arenaState.projectiles.push({x: projX + (facingRight ? 50 : -50), y: y - 40, vx: ultiVx * 0.8, vy: rand(-150, 150), life: 1.5, damage: 0, isPlayer: false, type: 'banana', color: '#f1c40f', radius: 8});
+          }, i * 300);
+        }
+      } else if (skillAction === 'animalFriends') {
+        for (let i = 0; i < 4; i++) {
+          arenaState.projectiles.push({x: projX - i * 40, y: y - 20 + rand(-20, 20), vx: ultiVx * (1 + i * 0.1), vy: 0, life: 2, damage: 0, isPlayer: false, type: 'animal', color: '#8b4513', radius: 20});
+        }
+      } else if (skillAction === 'illusionStorm') {
+        for (let i = 0; i < 5; i++) {
+          arenaState.projectiles.push({x: projX, y: y - 30 + (i - 2) * 25, vx: ultiVx, vy: rand(-30, 30), life: 2, damage: 0, isPlayer: false, type: 'illusion', color: '#9b59b6', radius: 14});
+        }
+      } else if (skillAction === 'windSword') {
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx * 1.2, vy: 0, life: 2, damage: 0, isPlayer: false, type: 'windSword', color: '#3498db', radius: 35});
+      } else if (skillAction === 'darkAura') {
+        arenaState.projectiles.push({x: projX, y: y - 40, vx: ultiVx, vy: 0, life: 2.5, damage: 0, isPlayer: false, type: 'darkCrow', color: '#1a1a1a', radius: 30});
+      } else if (skillAction === 'paperWings') {
+        for (let i = 0; i < 10; i++) {
+          arenaState.projectiles.push({x: projX + rand(-20, 20), y: y - 30 + rand(-40, 40), vx: ultiVx * (0.8 + Math.random() * 0.4), vy: rand(-100, 100), life: 2, damage: 0, isPlayer: false, type: 'paper', color: '#ecf0f1', radius: 8});
+        }
+      } else if (skillAction === 'fireDragon') {
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx, vy: 0, life: 2.5, damage: 0, isPlayer: false, type: 'fireDragon', color: '#e74c3c', radius: 40});
+      } else if (skillAction === 'mysticLightning') {
+        for (let i = 0; i < 3; i++) {
+          arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx * (1 + i * 0.2), vy: (i - 1) * 100, life: 1.5, damage: 0, isPlayer: false, type: 'lightning', color: '#f1c40f', radius: 12});
+        }
+      } else if (skillAction === 'arrowRain') {
+        for (let i = 0; i < 8; i++) {
+          arenaState.projectiles.push({x: projX + i * 10, y: y - 60 - i * 20, vx: ultiVx * 0.8, vy: 200 + i * 30, life: 2, damage: 0, isPlayer: false, type: 'arrow', color: '#fff', radius: 6});
+        }
+      } else if (skillAction === 'shadowClone') {
+        for (let i = 0; i < 3; i++) {
+          arenaState.projectiles.push({x: projX, y: y - 30 + (i - 1) * 30, vx: ultiVx * (0.9 + i * 0.1), vy: 0, life: 2, damage: 0, isPlayer: false, type: 'shadowClone', color: '#8e44ad', radius: 20});
+        }
+      } else {
+        // Default ultimate
+        arenaState.projectiles.push({x: projX, y: y - 30, vx: ultiVx, vy: 0, life: 2, damage: 0, isPlayer: false, type: 'ultimate', color: color, radius: 25});
+      }
     }
     
     // Particles for visual feedback
