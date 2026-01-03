@@ -1,2 +1,4 @@
 node_modules/
 .DS_Store
+serviceAccountKey.json
+migrate-to-firebase.js
