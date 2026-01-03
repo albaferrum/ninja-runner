@@ -3508,7 +3508,8 @@
       welcomeText.textContent = `Hoş geldin, ${result.username}!`;
       showScreen('charSelect');
     } catch (err) {
-      loginError.textContent = 'Sunucu hatası';
+      console.error('Login error:', err);
+      loginError.textContent = 'Bağlantı hatası - server çalışıyor mu?';
     }
     loginBtn.disabled = false;
   });

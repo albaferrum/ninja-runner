@@ -1,1 +1,9 @@
-{}
+{
+  "cem": {
+    "coins": 6,
+    "doubleJump": true,
+    "extraLives": 0,
+    "airDash": false,
+    "lastUpdated": "2026-01-03T20:56:58.144Z"
+  }
+}

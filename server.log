@@ -1,0 +1,10 @@
+🎮 Ninja Runner Leaderboard Server running at http://localhost:3000
+📊 API endpoints:
+   GET  /api/scores          - Get top 50 scores
+   POST /api/scores          - Submit a score
+   GET  /api/scores/:nickname - Get player's best score
+   POST /api/register        - Register new user
+   POST /api/login           - Login user
+
+🌐 Open http://localhost:3000 to play the game!
+📥 Synced 32 scores from Firebase

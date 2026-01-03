@@ -304,12 +304,12 @@ async function syncUsersFromFirebase() {
     const data = await response.json();
     
     if (data) {
-      const fbUsers = Object.values(data);
+      const fbUsers = Object.values(data).filter(u => u && u.username); // Filter valid users
       const localUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
       
       let added = 0;
       for (const fbUser of fbUsers) {
-        if (!localUsers.find(u => u.username.toLowerCase() === fbUser.username.toLowerCase())) {
+        if (!localUsers.find(u => u.username && u.username.toLowerCase() === fbUser.username.toLowerCase())) {
           localUsers.push(fbUser);
           added++;
         }
@@ -423,25 +423,53 @@ app.get('/api/userdata/:username', async (req, res) => {
       return res.json(userdata[username]);
     }
     
-    // Fallback to Firebase (for migration)
+    // Fallback to Firebase (for migration) - only if rules allow
     try {
       const fetch = (await import('node-fetch')).default;
       const response = await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(username)}.json`);
       const data = await response.json();
-      if (data) {
+      // Check if valid data (not error or null)
+      if (data && typeof data === 'object' && !data.error && data.coins !== undefined) {
         // Save to local file
         userdata[username] = data;
         fs.writeFileSync(USERDATA_FILE, JSON.stringify(userdata, null, 2));
+        console.log(`📦 Migrated userdata for ${username} from Firebase`);
         return res.json(data);
       }
     } catch (fbError) {
-      console.log('Firebase userdata read failed');
+      console.log('Firebase userdata read failed (expected if rules are locked)');
     }
     
     res.json(null);
   } catch (error) {
     console.error('Error reading userdata:', error);
     res.status(500).json({ error: 'Failed to read user data' });
+  }
+});
+
+// Admin: Set user coins (bypass anti-cheat)
+app.post('/api/admin/setcoins/:username', (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    const { coins, adminKey } = req.body;
+    
+    // Simple admin key check (in production use proper auth)
+    if (adminKey !== 'ninja-admin-2026') {
+      return res.status(403).json({ error: 'Invalid admin key' });
+    }
+    
+    const userdata = JSON.parse(fs.readFileSync(USERDATA_FILE, 'utf8'));
+    userdata[username] = {
+      ...userdata[username],
+      coins: coins,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(USERDATA_FILE, JSON.stringify(userdata, null, 2));
+    console.log(`👑 Admin set ${username} coins to ${coins}`);
+    res.json({ message: 'Coins set', coins });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to set coins' });
   }
 });
 
