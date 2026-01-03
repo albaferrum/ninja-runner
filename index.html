@@ -2538,6 +2538,8 @@
     opponentReady: false,
     countdown: 0,
     inMatch: false,
+    matchEnded: false,
+    matchResult: null,
     listener: null, // Firebase listener reference
     
     // WebRTC
@@ -4396,11 +4398,13 @@
     let lastDamageProcessed = 0;
     arenaState.damageListener = database.ref(`arena/${roomId}/${myPath}/pendingDamage`).on('value', (snapshot) => {
       const damage = snapshot.val();
+      console.log('📩 Damage listener triggered:', {damage, lastDamageProcessed, active: arenaState.active, path: `arena/${roomId}/${myPath}/pendingDamage`});
       // Only process if damage is a positive number and different from last processed
       if (damage && damage > 0 && arenaState.active && damage !== lastDamageProcessed) {
-        console.log('💥 Received damage from Firebase:', damage);
+        console.log('💥 Processing damage from Firebase:', damage, 'Previous HP:', arenaState.player.hp);
         lastDamageProcessed = damage;
         arenaState.player.hp -= damage;
+        console.log('💥 New HP:', arenaState.player.hp);
         // Clear the pending damage with null
         database.ref(`arena/${roomId}/${myPath}/pendingDamage`).set(null);
         
@@ -4567,8 +4571,12 @@
       
       // Check collision with opponent (use interpolated position) - only once per projectile
       if (proj.isPlayer && !proj.hasHit) {
-        if (Math.abs(proj.x - opp.x) < 40 && Math.abs(proj.y - opp.y) < 60) {
+        const hitX = Math.abs(proj.x - opp.x) < 40;
+        const hitY = Math.abs(proj.y - opp.y) < 60;
+        console.log('🎯 Checking hit:', {projX: proj.x, projY: proj.y, oppX: opp.x, oppY: opp.y, hitX, hitY});
+        if (hitX && hitY) {
           // Hit opponent
+          console.log('💥 HIT! Calling damageOpponent with damage:', proj.damage || 10);
           proj.hasHit = true;
           damageOpponent(proj.damage || 10);
           return false;
@@ -4922,11 +4930,11 @@
 
   // Spawn opponent's projectile (visual only, no damage calculation)
   function spawnOpponentProjectile(skill) {
-    // Use opponent's charKey from arenaState (more reliable)
-    const charKey = arenaState.opponent.charKey;
+    // Use charKey from skill data (sent by opponent) - this is the correct character!
+    const charKey = skill.charKey || arenaState.opponent.charKey;
     const char = CHARACTERS[charKey];
     if (!char) {
-      console.error('Unknown character:', charKey);
+      console.error('Unknown character:', charKey, 'skill:', skill);
       return;
     }
     
@@ -4987,7 +4995,7 @@
 
   // Damage opponent
   async function damageOpponent(damage) {
-    console.log('⚔️ Dealing damage:', damage, 'WebRTC connected:', arenaState.isConnected);
+    console.log('⚔️ damageOpponent called with damage:', damage, 'roomId:', arenaState.roomId, 'isHost:', arenaState.isHost);
     
     // Send damage via WebRTC (instant!)
     if (arenaState.isConnected && arenaState.dataChannel?.readyState === 'open') {
@@ -4998,19 +5006,24 @@
     }
     
     // Fallback to Firebase SDK - write pendingDamage for opponent to read
-    console.log('📤 Sending damage via Firebase SDK');
-    // No local prediction - opponent HP comes from Firebase listener
+    console.log('📤 Sending damage via Firebase SDK to:', arenaState.isHost ? 'guest' : 'host');
     
     if (arenaState.roomId) {
       const oppPath = arenaState.isHost ? 'guest' : 'host';
+      const damageRef = database.ref(`arena/${arenaState.roomId}/${oppPath}/pendingDamage`);
+      console.log('📤 Writing to path:', `arena/${arenaState.roomId}/${oppPath}/pendingDamage`);
       try {
         // Use transaction to safely add damage
-        database.ref(`arena/${arenaState.roomId}/${oppPath}/pendingDamage`).transaction((current) => {
+        await damageRef.transaction((current) => {
+          console.log('🔄 Transaction: current value =', current, 'adding', damage);
           return (current || 0) + damage;
         });
+        console.log('✅ Damage transaction completed');
       } catch (err) {
-        console.error('Failed to sync damage:', err);
+        console.error('❌ Failed to sync damage:', err);
       }
+    } else {
+      console.error('❌ No roomId available!');
     }
   }
 
