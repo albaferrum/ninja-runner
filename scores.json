@@ -1,226 +1,152 @@
 [
   {
     "character": "ringo",
-    "date": "2026-01-02T21:00:03.591Z",
-    "location": "dark",
     "nickname": "cem",
     "score": 3091
   },
   {
+    "character": "kazuya",
+    "nickname": "Kazuş",
+    "score": 507
+  },
+  {
+    "character": "kagi",
+    "nickname": "Best Kagi EU",
+    "score": 1365
+  },
+  {
+    "character": "ringo",
+    "nickname": "TestAccount",
+    "score": 237
+  },
+  {
+    "character": "riku",
+    "nickname": "yandanyemiß",
+    "score": 2957
+  },
+  {
+    "character": "kagi",
+    "nickname": "",
+    "score": 512
+  },
+  {
     "character": "ryoken",
-    "date": "2026-01-01T12:22:46.820Z",
-    "location": "dark",
     "nickname": "123",
     "score": 6
   },
   {
+    "character": "chisa",
+    "nickname": "A",
+    "score": 421
+  },
+  {
+    "character": "usagi",
+    "nickname": "Cortigo",
+    "score": 226
+  },
+  {
     "character": "kagi",
-    "date": "2026-01-01T12:54:41.082Z",
-    "location": "forest",
     "nickname": "Deneme",
     "score": 350
   },
   {
     "character": "susumu",
-    "date": "2026-01-01T13:25:36.121Z",
-    "location": "mountain",
     "nickname": "diloş",
     "score": 114
   },
   {
-    "character": "riku",
-    "date": "2026-01-02T14:02:14.721Z",
-    "location": "dark",
-    "nickname": "Kagimagi",
-    "score": 2681
+    "character": "joaryu",
+    "nickname": "Elemterefis",
+    "score": 17
   },
   {
-    "character": "akemi",
-    "date": "2026-01-01T13:05:45.757Z",
-    "location": "mountain",
-    "nickname": "selam",
-    "score": 174
-  },
-  {
-    "character": "usagi",
-    "date": "2026-01-01T14:00:06.390Z",
-    "location": "dark",
-    "nickname": "Cortigo",
-    "score": 226
-  },
-  {
-    "character": "riku",
-    "date": "2026-01-03T13:08:29.770Z",
-    "location": "mountain",
-    "nickname": "yandanyemiß",
-    "score": 2957
-  },
-  {
-    "character": "susumu",
-    "date": "2026-01-03T16:13:00.734Z",
-    "location": "dark",
-    "nickname": "Susu",
-    "score": 1677
+    "character": "togami",
+    "nickname": "götkafali",
+    "score": 237
   },
   {
     "character": "joaryu",
-    "date": "2026-01-01T15:31:18.835Z",
-    "location": "forest",
+    "nickname": "jj",
+    "score": 442
+  },
+  {
+    "character": "joaryu",
     "nickname": "Jœru",
     "score": 139
   },
   {
     "character": "chisa",
-    "date": "2026-01-01T15:59:12.969Z",
-    "location": "mountain",
     "nickname": "Kagici",
     "score": 476
   },
   {
-    "character": "kazuya",
-    "date": "2026-01-03T20:27:52.087Z",
-    "location": "dark",
-    "nickname": "Kazuş",
-    "score": 507
-  },
-  {
-    "character": "butsuo",
-    "date": "2026-01-01T16:40:57.880Z",
-    "location": "mountain",
-    "nickname": "Osuruk",
-    "score": 185
-  },
-  {
-    "character": "shinji",
-    "date": "2026-01-02T20:04:22.697Z",
-    "location": "dark",
-    "nickname": "Zasetsu",
-    "score": 371
-  },
-  {
-    "character": "kagi",
-    "date": "2026-01-01T23:00:00.185Z",
-    "location": "dark",
-    "nickname": "",
-    "score": 512
+    "character": "riku",
+    "nickname": "Kagimagi",
+    "score": 2681
   },
   {
     "character": "teki",
-    "date": "2026-01-01T20:01:56.182Z",
-    "location": "dark",
     "nickname": "Kasumikage",
     "score": 373
   },
   {
-    "character": "susumu",
-    "date": "2026-01-01T20:41:34.519Z",
-    "location": "mountain",
-    "nickname": "susmuk",
-    "score": 509
-  },
-  {
-    "character": "togami",
-    "date": "2026-01-01T20:47:22.987Z",
-    "location": "mountain",
-    "nickname": "götkafali",
-    "score": 237
-  },
-  {
     "character": "kazuya",
-    "date": "2026-01-01T20:55:38.304Z",
-    "location": "dark",
     "nickname": "lollik",
     "score": 500
   },
   {
-    "character": "susumu",
-    "date": "2026-01-01T21:02:30.641Z",
-    "location": "mountain",
-    "nickname": "çokseksiyim",
-    "score": 747
-  },
-  {
-    "character": "joaryu",
-    "date": "2026-01-01T23:09:51.772Z",
-    "location": "dark",
-    "nickname": "jj",
-    "score": 442
-  },
-  {
-    "character": "togami",
-    "date": "2026-01-02T00:36:54.092Z",
-    "location": "forest",
-    "nickname": "sikiş",
-    "score": 525
-  },
-  {
-    "character": "joaryu",
-    "date": "2026-01-02T03:46:52.925Z",
-    "location": "mountain",
-    "nickname": "Elemterefis",
-    "score": 17
-  },
-  {
-    "character": "teki",
-    "date": "2026-01-02T07:20:03.041Z",
-    "location": "dark",
-    "nickname": "siki",
-    "score": 507
-  },
-  {
-    "character": "usagi",
-    "date": "2026-01-02T08:02:50.862Z",
-    "location": "dark",
-    "nickname": "Çükübik",
-    "score": 500
-  },
-  {
     "character": "riku",
-    "date": "2026-01-02T10:19:21.488Z",
-    "location": "forest",
     "nickname": "Max",
     "score": 1051
   },
   {
-    "character": "shinji",
-    "date": "2026-01-02T20:09:43.423Z",
-    "location": "dark",
-    "nickname": "Zasetsu",
-    "score": 3299
+    "character": "butsuo",
+    "nickname": "Osuruk",
+    "score": 185
+  },
+  {
+    "character": "teki",
+    "nickname": "siki",
+    "score": 507
+  },
+  {
+    "character": "togami",
+    "nickname": "sikiş",
+    "score": 525
+  },
+  {
+    "character": "susumu",
+    "nickname": "susmuk",
+    "score": 509
+  },
+  {
+    "character": "susumu",
+    "nickname": "Susu",
+    "score": 1677
   },
   {
     "character": "riku",
-    "date": "2026-01-02T22:36:50.134Z",
-    "location": "dark",
     "nickname": "Xan",
     "score": 283
   },
   {
+    "character": "susumu",
+    "nickname": "çokseksiyim",
+    "score": 747
+  },
+  {
+    "character": "usagi",
+    "nickname": "Çükübik",
+    "score": 500
+  },
+  {
+    "character": "akemi",
+    "nickname": "selam",
+    "score": 174
+  },
+  {
     "character": "shinji",
-    "date": "2026-01-02T22:54:01.932Z",
-    "location": "dark",
     "nickname": "Zasetsu",
     "score": 3422
-  },
-  {
-    "character": "chisa",
-    "date": "2026-01-02T23:38:37.733Z",
-    "location": "dark",
-    "nickname": "A",
-    "score": 421
-  },
-  {
-    "character": "ringo",
-    "date": "2026-01-02T23:57:07.519Z",
-    "location": "forest",
-    "nickname": "TestAccount",
-    "score": 237
-  },
-  {
-    "character": "kagi",
-    "date": "2026-01-03T14:18:51.387Z",
-    "location": "dark",
-    "nickname": "Best Kagi EU",
-    "score": 1365
   }
 ]

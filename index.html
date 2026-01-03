@@ -4886,7 +4886,9 @@
     }
     
     // Fallback to Firebase (slower, only if WebRTC not available)
-    if (now - lastSyncTime < 100) return; // Throttle Firebase to 100ms
+    // Note: already throttled at 16ms above, use 100ms for Firebase
+    if (now - (arenaState.lastFirebaseSync || 0) < 100) return;
+    arenaState.lastFirebaseSync = now;
     
     const playerPath = arenaState.isHost ? 'host' : 'guest';
     
@@ -4896,8 +4898,13 @@
         body: JSON.stringify({
           x: Math.round(p.x),
           y: Math.round(p.y),
+          vx: Math.round(p.vx || 0),
+          vy: Math.round(p.vy || 0),
           hp: p.hp,
-          facingRight: p.facingRight
+          facingRight: p.facingRight,
+          crouching: arenaKeys.down,
+          jumping: p.y < 460,
+          attacking: p.attacking || false
         })
       });
       
@@ -4939,7 +4946,12 @@
       if (oppData) {
         arenaState.opponent.targetX = oppData.x ?? arenaState.opponent.targetX;
         arenaState.opponent.targetY = oppData.y ?? arenaState.opponent.targetY;
+        arenaState.opponent.vx = oppData.vx ?? 0;
+        arenaState.opponent.vy = oppData.vy ?? 0;
         arenaState.opponent.facingRight = oppData.facingRight ?? arenaState.opponent.facingRight;
+        arenaState.opponent.crouching = oppData.crouching || false;
+        arenaState.opponent.jumping = oppData.jumping || false;
+        arenaState.opponent.attacking = oppData.attacking || false;
         
         // Don't override opponent HP from Firebase - we track it locally from damage
       }
