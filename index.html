@@ -4421,8 +4421,17 @@
       const skill = snapshot.val();
       if (skill && skill.timestamp > lastSkillTimestamp && arenaState.active) {
         lastSkillTimestamp = skill.timestamp;
-        console.log('🎯 Opponent used skill:', skill.type);
+        console.log('🎯 Opponent used skill:', skill.type, 'charKey:', skill.charKey);
         spawnOpponentProjectile(skill);
+      }
+    });
+    
+    // Listen for match end (opponent lost)
+    arenaState.matchEndListener = database.ref(`arena/${roomId}/${oppPath}/matchEnded`).on('value', (snapshot) => {
+      const ended = snapshot.val();
+      if (ended && arenaState.active) {
+        console.log('🏆 Opponent reported match ended - we won!');
+        endArenaMatch(true);
       }
     });
     
@@ -5092,6 +5101,17 @@
     
     console.log('🏁 Match ended! Won:', won);
     
+    // If we lost, notify opponent via Firebase immediately
+    if (!won && arenaState.roomId) {
+      const myPath = arenaState.isHost ? 'host' : 'guest';
+      try {
+        database.ref(`arena/${arenaState.roomId}/${myPath}/matchEnded`).set(true);
+        console.log('📤 Notified opponent that we lost');
+      } catch (err) {
+        console.error('Error notifying match end:', err);
+      }
+    }
+    
     // Clean up Firebase real-time listeners
     if (arenaState.opponentListener) {
       const oppPath = arenaState.isHost ? 'guest' : 'host';
@@ -5107,6 +5127,11 @@
       const oppPath = arenaState.isHost ? 'guest' : 'host';
       database.ref(`arena/${arenaState.roomId}/${oppPath}/lastSkill`).off('value', arenaState.skillListener);
       arenaState.skillListener = null;
+    }
+    if (arenaState.matchEndListener) {
+      const oppPath = arenaState.isHost ? 'guest' : 'host';
+      database.ref(`arena/${arenaState.roomId}/${oppPath}/matchEnded`).off('value', arenaState.matchEndListener);
+      arenaState.matchEndListener = null;
     }
     
     // Notify opponent via WebRTC
