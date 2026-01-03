@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const SCORES_FILE = path.join(__dirname, 'scores.json');
 
 // Firebase URL (keep this secret - only server uses it)
-const FIREBASE_URL = 'https://userprovider-bb4b4-default-rtdb.firebaseio.com';
+const FIREBASE_URL = 'https://ninja-runner-694e8-default-rtdb.europe-west1.firebasedatabase.app';
 
 // Game sessions for anti-cheat
 const gameSessions = new Map();
@@ -210,11 +210,45 @@ if (!fs.existsSync(SCORES_FILE)) {
   fs.writeFileSync(SCORES_FILE, JSON.stringify([], null, 2));
 }
 
-// Get all scores (sorted by score descending)
-app.get('/api/scores', (req, res) => {
+// Sync scores from Firebase on startup
+async function syncFromFirebase() {
   try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`${FIREBASE_URL}/scores.json`);
+    const data = await response.json();
+    
+    if (data) {
+      const scores = Object.values(data);
+      fs.writeFileSync(SCORES_FILE, JSON.stringify(scores, null, 2));
+      console.log(`📥 Synced ${scores.length} scores from Firebase`);
+    }
+  } catch (error) {
+    console.log('⚠️ Could not sync from Firebase:', error.message);
+  }
+}
+syncFromFirebase();
+
+// Get all scores (sorted by score descending) - tries Firebase first, fallback to local
+app.get('/api/scores', async (req, res) => {
+  try {
+    // Try Firebase first for most up-to-date data
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const response = await fetch(`${FIREBASE_URL}/scores.json`);
+      const data = await response.json();
+      
+      if (data) {
+        const scores = Object.values(data)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 50);
+        return res.json(scores);
+      }
+    } catch (fbError) {
+      console.log('Firebase read failed, using local file');
+    }
+    
+    // Fallback to local file
     const scores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8'));
-    // Sort by score descending and return top 50
     const sortedScores = scores
       .sort((a, b) => b.score - a.score)
       .slice(0, 50);
