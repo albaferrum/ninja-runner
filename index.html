@@ -4430,6 +4430,12 @@
   // Arena game loop
   let arenaLastTime = 0;
   function arenaGameLoop(timestamp) {
+    // If match ended, draw result overlay
+    if (arenaState.matchEnded) {
+      drawArenaResult(arenaState.matchResult);
+      return;
+    }
+    
     if (!arenaState.active) return;
     
     const dt = Math.min((timestamp - arenaLastTime) / 1000, 0.05);
@@ -4440,6 +4446,29 @@
     syncArenaState();
     
     requestAnimationFrame(arenaGameLoop);
+  }
+  
+  // Draw arena match result
+  function drawArenaResult(won) {
+    // Draw last frame of arena
+    drawArena();
+    
+    // Overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, 480, 640);
+    
+    const resultText = won ? '🏆 KAZANDIN!' : '💀 KAYBETTİN!';
+    
+    ctx.fillStyle = won ? '#ffd700' : '#ff4444';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(resultText, 240, 280);
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('Devam etmek için tıkla', 240, 340);
+    
+    ctx.textAlign = 'left';
   }
 
   // Arena input state
@@ -4893,8 +4922,15 @@
 
   // Spawn opponent's projectile (visual only, no damage calculation)
   function spawnOpponentProjectile(skill) {
-    const char = CHARACTERS[skill.charKey];
-    if (!char) return;
+    // Use opponent's charKey from arenaState (more reliable)
+    const charKey = arenaState.opponent.charKey;
+    const char = CHARACTERS[charKey];
+    if (!char) {
+      console.error('Unknown character:', charKey);
+      return;
+    }
+    
+    console.log('🎯 Spawning opponent projectile:', skill.type, 'charKey:', charKey, 'action:', skill.type === 'X' ? char.skillX?.action : char.skillF?.action);
     
     // Mirror the position and direction for our view
     const x = skill.x;
@@ -4907,6 +4943,7 @@
     
     if (skill.type === 'X') {
       // Basic skill projectile (visual only, isPlayer = false so no damage)
+      const skillAction = char.skillX?.action || 'default';
       arenaState.projectiles.push({
         x: projX,
         y: y - 30,
@@ -4915,7 +4952,7 @@
         life: 1.5,
         damage: 0, // No damage - opponent handles hit detection
         isPlayer: false,
-        type: char.skillX.action,
+        type: skillAction,
         color: color,
         radius: 12
       });
@@ -5037,6 +5074,10 @@
   async function endArenaMatch(won) {
     if (!arenaState.active) return; // Prevent double calls
     arenaState.active = false;
+    arenaState.matchEnded = true;
+    arenaState.matchResult = won;
+    
+    console.log('🏁 Match ended! Won:', won);
     
     // Clean up Firebase real-time listeners
     if (arenaState.opponentListener) {
@@ -5080,22 +5121,6 @@
       }
     }
     
-    // Show result on canvas
-    const resultText = won ? '🏆 KAZANDIN!' : '💀 KAYBETTİN!';
-    
-    // Draw result overlay
-    ctx.fillStyle = 'rgba(0,0,0,0.8)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = won ? '#ffd700' : '#ff4444';
-    ctx.font = 'bold 48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(resultText, canvas.width / 2, canvas.height / 2 - 30);
-    
-    ctx.fillStyle = '#fff';
-    ctx.font = '24px sans-serif';
-    ctx.fillText('Devam etmek için tıkla', canvas.width / 2, canvas.height / 2 + 30);
-    
     // Wait for click to continue
     const handleClick = () => {
       canvas.removeEventListener('click', handleClick);
@@ -5112,6 +5137,8 @@
       arenaState.ready = false;
       arenaState.inMatch = false;
       arenaState.countdownStarted = false;
+      arenaState.matchEnded = false;
+      arenaState.matchResult = null;
       
       // Go back to character select
       showScreen('charSelect');
