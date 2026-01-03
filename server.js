@@ -296,6 +296,36 @@ if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
 }
 
+// Sync users from Firebase on startup
+async function syncUsersFromFirebase() {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`${FIREBASE_URL}/users.json`);
+    const data = await response.json();
+    
+    if (data) {
+      const fbUsers = Object.values(data);
+      const localUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+      
+      let added = 0;
+      for (const fbUser of fbUsers) {
+        if (!localUsers.find(u => u.username.toLowerCase() === fbUser.username.toLowerCase())) {
+          localUsers.push(fbUser);
+          added++;
+        }
+      }
+      
+      if (added > 0) {
+        fs.writeFileSync(USERS_FILE, JSON.stringify(localUsers, null, 2));
+        console.log(`👤 Synced ${added} users from Firebase`);
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ Could not sync users from Firebase:', error.message);
+  }
+}
+syncUsersFromFirebase();
+
 // Register new user
 app.post('/api/register', (req, res) => {
   try {
@@ -361,7 +391,9 @@ app.post('/api/login', (req, res) => {
       return res.status(401).json({ error: 'Kullanıcı bulunamadı' });
     }
 
-    if (user.password !== password) {
+    // Check password (support both plain and base64 encoded for Firebase migration)
+    const base64Password = Buffer.from(password).toString('base64');
+    if (user.password !== password && user.password !== base64Password) {
       return res.status(401).json({ error: 'Şifre yanlış' });
     }
 
@@ -369,6 +401,86 @@ app.post('/api/login', (req, res) => {
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ error: 'Giriş işlemi başarısız' });
+  }
+});
+
+// ===== USER DATA (coins, items, etc.) =====
+const USERDATA_FILE = path.join(__dirname, 'userdata.json');
+
+// Initialize userdata file
+if (!fs.existsSync(USERDATA_FILE)) {
+  fs.writeFileSync(USERDATA_FILE, JSON.stringify({}, null, 2));
+}
+
+// Get user data
+app.get('/api/userdata/:username', async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    
+    // Try local file first
+    const userdata = JSON.parse(fs.readFileSync(USERDATA_FILE, 'utf8'));
+    if (userdata[username]) {
+      return res.json(userdata[username]);
+    }
+    
+    // Fallback to Firebase (for migration)
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const response = await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(username)}.json`);
+      const data = await response.json();
+      if (data) {
+        // Save to local file
+        userdata[username] = data;
+        fs.writeFileSync(USERDATA_FILE, JSON.stringify(userdata, null, 2));
+        return res.json(data);
+      }
+    } catch (fbError) {
+      console.log('Firebase userdata read failed');
+    }
+    
+    res.json(null);
+  } catch (error) {
+    console.error('Error reading userdata:', error);
+    res.status(500).json({ error: 'Failed to read user data' });
+  }
+});
+
+// Save user data
+app.post('/api/userdata/:username', (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    const data = req.body;
+    
+    // Validate data
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: 'Invalid data' });
+    }
+    
+    // Anti-cheat: Limit coins increment
+    const userdata = JSON.parse(fs.readFileSync(USERDATA_FILE, 'utf8'));
+    const existing = userdata[username] || {};
+    
+    // Check for suspicious coin increase
+    if (data.coins && existing.coins) {
+      const coinIncrease = data.coins - existing.coins;
+      if (coinIncrease > 1000) {
+        console.log(`⚠️ Suspicious coin increase for ${username}: +${coinIncrease}`);
+        data.coins = existing.coins + 1000; // Cap increase
+      }
+    }
+    
+    // Merge data
+    userdata[username] = {
+      ...existing,
+      ...data,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(USERDATA_FILE, JSON.stringify(userdata, null, 2));
+    res.json({ message: 'Data saved', data: userdata[username] });
+  } catch (error) {
+    console.error('Error saving userdata:', error);
+    res.status(500).json({ error: 'Failed to save user data' });
   }
 });
 

@@ -4,5 +4,47 @@
     "email": "cemakdemir99@gmail.com",
     "password": "123123",
     "createdAt": "2026-01-02T23:31:22.544Z"
+  },
+  {
+    "createdAt": "2026-01-02T23:56:41.649Z",
+    "email": "salak@gmail.com",
+    "password": "MTIzMTIz",
+    "username": "TestAccount"
+  },
+  {
+    "createdAt": "2026-01-03T00:19:38.883Z",
+    "email": "selam@gmail.com",
+    "password": "MTIzMTIz",
+    "username": "selam"
+  },
+  {
+    "createdAt": "2026-01-03T13:04:23.967Z",
+    "email": "thebarisu@gmail.com",
+    "password": "eWFuZGFueWVtad9zZW5pYmlsbWnf",
+    "username": "yandanyemiß"
+  },
+  {
+    "createdAt": "2026-01-03T13:54:20.229Z",
+    "email": "mihawara@gmail.com",
+    "password": "MzEzMQ==",
+    "username": "Susu"
+  },
+  {
+    "createdAt": "2026-01-03T14:09:08.023Z",
+    "email": "a@gmail.com",
+    "password": "MTIzNjU0",
+    "username": "Best Kagi EU"
+  },
+  {
+    "createdAt": "2026-01-03T20:00:19.718Z",
+    "email": "info@zasetsu.com",
+    "password": "U2Vrczk5MDE=",
+    "username": "Zasetsu"
+  },
+  {
+    "createdAt": "2026-01-03T20:26:11.639Z",
+    "email": "h.baris.oksuzoglu@gmail.com",
+    "password": "dGV5eWFyZTM=",
+    "username": "Kazuş"
   }
 ]

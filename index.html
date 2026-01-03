@@ -3439,46 +3439,30 @@
     registerError.textContent = '';
 
     try {
-      // Check if username already exists in Firebase
-      const usersResponse = await fetch(`${FIREBASE_URL}/users.json`);
-      const usersData = await usersResponse.json();
+      // Use server API for registration
+      const response = await fetch(`${SERVER_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
       
-      if (usersData) {
-        const users = Object.values(usersData);
-        if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-          registerError.textContent = 'Bu kullanıcı adı zaten alınmış';
-          registerBtn.disabled = false;
-          return;
-        }
-        if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-          registerError.textContent = 'Bu e-posta zaten kayıtlı';
-          registerBtn.disabled = false;
-          return;
-        }
+      const result = await response.json();
+      
+      if (!response.ok) {
+        registerError.textContent = result.error || 'Kayıt başarısız';
+        registerBtn.disabled = false;
+        return;
       }
 
-      // Register new user to Firebase
-      const newUser = {
-        username: username.slice(0, 16),
-        email: email.toLowerCase(),
-        password: btoa(password), // Simple base64 encoding (not secure, but ok for game)
-        createdAt: new Date().toISOString()
-      };
-
-      await fetch(`${FIREBASE_URL}/users.json`, {
-        method: 'POST',
-        body: JSON.stringify(newUser)
-      });
-
       // Registration successful - auto login
-      currentUser = { username, email };
-      nickname = username;
+      currentUser = { username: result.username, email: result.email };
+      nickname = result.username;
       G.coins = 0; // New user starts with 0 coins
       permBonuses.doubleJump = false;
       permBonuses.extraLives = 0;
       permBonuses.airDash = false;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
-      welcomeText.textContent = `Hoş geldin, ${username}!`;
+      welcomeText.textContent = `Hoş geldin, ${result.username}!`;
       updateCoinsDisplay();
       showScreen('charSelect');
     } catch (err) {
@@ -3501,38 +3485,27 @@
     loginError.textContent = '';
 
     try {
-      // Fetch users from Firebase
-      const usersResponse = await fetch(`${FIREBASE_URL}/users.json`);
-      const usersData = await usersResponse.json();
-
-      if (!usersData) {
-        loginError.textContent = 'Kullanıcı bulunamadı';
-        loginBtn.disabled = false;
-        return;
-      }
-
-      const users = Object.values(usersData);
-      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-
-      if (!user) {
-        loginError.textContent = 'Kullanıcı bulunamadı';
-        loginBtn.disabled = false;
-        return;
-      }
-
-      // Check password (base64 encoded)
-      if (user.password !== btoa(password)) {
-        loginError.textContent = 'Şifre yanlış';
+      // Use server API for login
+      const response = await fetch(`${SERVER_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        loginError.textContent = result.error || 'Giriş başarısız';
         loginBtn.disabled = false;
         return;
       }
 
       // Login successful
-      currentUser = { username: user.username, email: user.email };
-      nickname = user.username;
+      currentUser = { username: result.username, email: result.email };
+      nickname = result.username;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
-      await loadUserData(user.username);
-      welcomeText.textContent = `Hoş geldin, ${user.username}!`;
+      await loadUserData(result.username);
+      welcomeText.textContent = `Hoş geldin, ${result.username}!`;
       showScreen('charSelect');
     } catch (err) {
       loginError.textContent = 'Sunucu hatası';
@@ -3545,10 +3518,10 @@
     viewLeaderboard('auth');
   });
 
-  // Load user coins and bonuses from Firebase
+  // Load user coins and bonuses from server API
   async function loadUserData(username) {
     try {
-      const response = await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(username.toLowerCase())}.json`);
+      const response = await fetch(`${SERVER_URL}/api/userdata/${encodeURIComponent(username.toLowerCase())}`);
       const data = await response.json();
       if (data) {
         if (typeof data.coins === 'number') {
@@ -3577,18 +3550,18 @@
     }
   }
 
-  // Save user data to Firebase
+  // Save user data via server API
   async function saveUserData() {
     if (!currentUser) return;
     try {
-      await fetch(`${FIREBASE_URL}/userdata/${encodeURIComponent(currentUser.username.toLowerCase())}.json`, {
-        method: 'PATCH',
+      await fetch(`${SERVER_URL}/api/userdata/${encodeURIComponent(currentUser.username.toLowerCase())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           coins: G.coins, 
           doubleJump: permBonuses.doubleJump,
           extraLives: permBonuses.extraLives,
-          airDash: permBonuses.airDash,
-          lastUpdated: new Date().toISOString() 
+          airDash: permBonuses.airDash
         })
       });
     } catch (err) {
