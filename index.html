@@ -3834,11 +3834,15 @@
     console.log('📨 Peer message received:', data.type, data); // DEBUG
     
     if (data.type === 'position') {
-      // Update opponent position
+      // Update opponent position and animation state
       arenaState.opponent.targetX = data.x;
       arenaState.opponent.targetY = data.y;
+      arenaState.opponent.vx = data.vx || 0;
+      arenaState.opponent.vy = data.vy || 0;
       arenaState.opponent.facingRight = data.facingRight;
-      // Note: opponent HP from position is their view, not authoritative for us
+      arenaState.opponent.crouching = data.crouching || false;
+      arenaState.opponent.jumping = data.jumping || false;
+      arenaState.opponent.attacking = data.attacking || false;
     } else if (data.type === 'projectile') {
       // Opponent fired a projectile - add it to our view (reversed)
       const proj = {
@@ -4870,8 +4874,13 @@
         type: 'position',
         x: Math.round(p.x),
         y: Math.round(p.y),
+        vx: Math.round(p.vx || 0),
+        vy: Math.round(p.vy || 0),
         hp: p.hp,
-        facingRight: p.facingRight
+        facingRight: p.facingRight,
+        crouching: arenaKeys.down,
+        jumping: p.y < 460,
+        attacking: p.attacking || false
       });
       return; // Don't use Firebase when WebRTC is active
     }
@@ -5073,7 +5082,7 @@
     P.x = arenaState.player.x - P.w / 2;
     P.y = arenaState.player.y;
     P.onGround = arenaState.player.y >= 460;
-    P.crouching = false;
+    P.crouching = arenaKeys.down;
     selectedChar = arenaState.player.charKey;
     
     // Flip if facing left
@@ -5091,6 +5100,7 @@
     P.x = arenaState.opponent.x - P.w / 2;
     P.y = arenaState.opponent.y;
     P.onGround = arenaState.opponent.y >= 460;
+    P.crouching = arenaState.opponent.crouching || false;
     selectedChar = arenaState.opponent.charKey;
     
     // Flip if facing left
