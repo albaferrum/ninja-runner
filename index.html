@@ -4380,6 +4380,14 @@
         arenaState.opponent.crouching = oppData.crouching || false;
         arenaState.opponent.jumping = oppData.jumping || false;
         arenaState.opponent.attacking = oppData.attacking || false;
+        // Sync opponent HP from Firebase (authoritative)
+        if (typeof oppData.hp === 'number') {
+          arenaState.opponent.hp = oppData.hp;
+          // Check if we won (opponent HP <= 0)
+          if (oppData.hp <= 0 && arenaState.active) {
+            endArenaMatch(true);
+          }
+        }
       }
     });
     
@@ -4857,18 +4865,13 @@
     if (arenaState.isConnected && arenaState.dataChannel?.readyState === 'open') {
       console.log('📤 Sending damage via WebRTC');
       sendToPeer({ type: 'damage', amount: damage });
-      arenaState.opponent.hp -= damage; // Local prediction
-      
-      if (arenaState.opponent.hp <= 0) {
-        arenaState.opponent.hp = 0;
-        endArenaMatch(true);
-      }
+      // No local prediction - wait for opponent to report their HP
       return;
     }
     
     // Fallback to Firebase SDK - write pendingDamage for opponent to read
     console.log('📤 Sending damage via Firebase SDK');
-    arenaState.opponent.hp -= damage; // Local prediction
+    // No local prediction - opponent HP comes from Firebase listener
     
     if (arenaState.roomId) {
       const oppPath = arenaState.isHost ? 'guest' : 'host';
@@ -4880,11 +4883,6 @@
       } catch (err) {
         console.error('Failed to sync damage:', err);
       }
-    }
-    
-    // Check for win
-    if (arenaState.opponent.hp <= 0) {
-      endArenaMatch(true);
     }
   }
 
