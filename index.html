@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>RPGTurk Ninja Runner v1.0</title>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2410,14 +2416,28 @@
   const logoutBtn = document.getElementById('logoutBtn');
   const nickLeaderboardBtn = document.getElementById('nickLeaderboardBtn');
 
-  // Firebase Realtime Database URL
-  const FIREBASE_URL = 'https://ninja-runner-694e8-default-rtdb.europe-west1.firebasedatabase.app';
+  // ===== FIREBASE CONFIGURATION =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyAhD6M8GLt-Rn8Qo83vwZuXH_thZMmVRUQ",
+    authDomain: "ninja-runner-694e8.firebaseapp.com",
+    databaseURL: "https://ninja-runner-694e8-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "ninja-runner-694e8",
+    storageBucket: "ninja-runner-694e8.firebasestorage.app",
+    messagingSenderId: "676105736280",
+    appId: "1:676105736280:web:ee2be2eeae6528fd50ba2d"
+  };
 
-  // Server URL for secure score submission
-  const SERVER_URL = window.location.origin; // Use same origin
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const database = firebase.database();
 
-  // Game session for anti-cheat
+  // Firebase Realtime Database URL (for REST API fallback - arena uses this)
+  const FIREBASE_URL = firebaseConfig.databaseURL;
+
+  // Game session for anti-cheat (client-side now)
   let gameSessionToken = null;
+  let gameStartTime = 0;
   let lastScoreUpdate = 0;
 
   // ===== STATE =====
@@ -3416,7 +3436,7 @@
     registerError.textContent = '';
   });
 
-  // Register
+  // Register with Firebase Auth
   registerBtn.addEventListener('click', async () => {
     const username = registerUsername.value.trim();
     const email = registerEmail.value.trim();
@@ -3430,8 +3450,8 @@
       registerError.textContent = 'Geçerli bir e-posta girin';
       return;
     }
-    if (password.length < 4) {
-      registerError.textContent = 'Şifre en az 4 karakter olmalı';
+    if (password.length < 6) {
+      registerError.textContent = 'Şifre en az 6 karakter olmalı';
       return;
     }
 
@@ -3439,44 +3459,65 @@
     registerError.textContent = '';
 
     try {
-      // Use server API for registration
-      const response = await fetch(`${SERVER_URL}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        registerError.textContent = result.error || 'Kayıt başarısız';
+      // Check if username is taken
+      const usernameSnapshot = await database.ref(`usernames/${username.toLowerCase()}`).once('value');
+      if (usernameSnapshot.exists()) {
+        registerError.textContent = 'Bu kullanıcı adı zaten alınmış';
         registerBtn.disabled = false;
         return;
       }
 
-      // Registration successful - auto login
-      currentUser = { username: result.username, email: result.email };
-      nickname = result.username;
-      G.coins = 0; // New user starts with 0 coins
+      // Create Firebase Auth user
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+
+      // Save username mapping and user data
+      await database.ref(`usernames/${username.toLowerCase()}`).set(user.uid);
+      await database.ref(`users/${user.uid}`).set({
+        username: username,
+        email: email,
+        coins: 0,
+        doubleJump: false,
+        extraLives: 0,
+        airDash: false,
+        createdAt: Date.now()
+      });
+
+      // Set display name
+      await user.updateProfile({ displayName: username });
+
+      // Registration successful
+      currentUser = { username: username, email: email, uid: user.uid };
+      nickname = username;
+      G.coins = 0;
       permBonuses.doubleJump = false;
       permBonuses.extraLives = 0;
       permBonuses.airDash = false;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
-      welcomeText.textContent = `Hoş geldin, ${result.username}!`;
+      welcomeText.textContent = `Hoş geldin, ${username}!`;
       updateCoinsDisplay();
       showScreen('charSelect');
     } catch (err) {
-      registerError.textContent = 'Sunucu hatası';
+      console.error('Register error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        registerError.textContent = 'Bu e-posta zaten kayıtlı';
+      } else if (err.code === 'auth/weak-password') {
+        registerError.textContent = 'Şifre çok zayıf (en az 6 karakter)';
+      } else if (err.code === 'auth/invalid-email') {
+        registerError.textContent = 'Geçersiz e-posta adresi';
+      } else {
+        registerError.textContent = err.message || 'Kayıt başarısız';
+      }
     }
     registerBtn.disabled = false;
   });
 
-  // Login
+  // Login with Firebase Auth
   loginBtn.addEventListener('click', async () => {
-    const username = loginUsername.value.trim();
+    const usernameOrEmail = loginUsername.value.trim();
     const password = loginPassword.value;
 
-    if (username.length < 1 || password.length < 1) {
+    if (usernameOrEmail.length < 1 || password.length < 1) {
       loginError.textContent = 'Tüm alanları doldurun';
       return;
     }
@@ -3485,31 +3526,61 @@
     loginError.textContent = '';
 
     try {
-      // Use server API for login
-      const response = await fetch(`${SERVER_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      let email = usernameOrEmail;
       
-      const result = await response.json();
-      
-      if (!response.ok) {
-        loginError.textContent = result.error || 'Giriş başarısız';
-        loginBtn.disabled = false;
-        return;
+      // If not an email, look up the email from username
+      if (!usernameOrEmail.includes('@')) {
+        const usernameSnapshot = await database.ref(`usernames/${usernameOrEmail.toLowerCase()}`).once('value');
+        if (!usernameSnapshot.exists()) {
+          loginError.textContent = 'Kullanıcı bulunamadı';
+          loginBtn.disabled = false;
+          return;
+        }
+        const uid = usernameSnapshot.val();
+        const userSnapshot = await database.ref(`users/${uid}/email`).once('value');
+        email = userSnapshot.val();
       }
 
+      // Sign in with Firebase Auth
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+
+      // Load user data from database
+      const userDataSnapshot = await database.ref(`users/${user.uid}`).once('value');
+      const userData = userDataSnapshot.val() || {};
+
       // Login successful
-      currentUser = { username: result.username, email: result.email };
-      nickname = result.username;
+      currentUser = { 
+        username: userData.username || user.displayName || usernameOrEmail, 
+        email: user.email, 
+        uid: user.uid 
+      };
+      nickname = currentUser.username;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
-      await loadUserData(result.username);
-      welcomeText.textContent = `Hoş geldin, ${result.username}!`;
+      
+      // Load coins and bonuses
+      G.coins = userData.coins || 0;
+      permBonuses.doubleJump = userData.doubleJump || false;
+      permBonuses.extraLives = userData.extraLives || 0;
+      permBonuses.airDash = userData.airDash || false;
+      
+      updateCoinsDisplay();
+      updateDojoUI();
+      welcomeText.textContent = `Hoş geldin, ${currentUser.username}!`;
       showScreen('charSelect');
     } catch (err) {
       console.error('Login error:', err);
-      loginError.textContent = 'Bağlantı hatası - server çalışıyor mu?';
+      if (err.code === 'auth/user-not-found') {
+        loginError.textContent = 'Kullanıcı bulunamadı';
+      } else if (err.code === 'auth/wrong-password') {
+        loginError.textContent = 'Şifre yanlış';
+      } else if (err.code === 'auth/invalid-email') {
+        loginError.textContent = 'Geçersiz e-posta adresi';
+      } else if (err.code === 'auth/too-many-requests') {
+        loginError.textContent = 'Çok fazla deneme. Lütfen bekleyin.';
+      } else {
+        loginError.textContent = err.message || 'Giriş başarısız';
+      }
     }
     loginBtn.disabled = false;
   });
@@ -3519,18 +3590,13 @@
     viewLeaderboard('auth');
   });
 
-  // Load user coins and bonuses from server API
-  async function loadUserData(username) {
+  // Load user data from Firebase Database
+  async function loadUserData(uid) {
     try {
-      const response = await fetch(`${SERVER_URL}/api/userdata/${encodeURIComponent(username.toLowerCase())}`);
-      const data = await response.json();
+      const snapshot = await database.ref(`users/${uid}`).once('value');
+      const data = snapshot.val();
       if (data) {
-        if (typeof data.coins === 'number') {
-          G.coins = data.coins;
-        } else {
-          G.coins = 0;
-        }
-        // Load permanent bonuses
+        G.coins = data.coins || 0;
         permBonuses.doubleJump = data.doubleJump || false;
         permBonuses.extraLives = data.extraLives || 0;
         permBonuses.airDash = data.airDash || false;
@@ -3551,19 +3617,15 @@
     }
   }
 
-  // Save user data via server API
+  // Save user data to Firebase Database
   async function saveUserData() {
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.uid) return;
     try {
-      await fetch(`${SERVER_URL}/api/userdata/${encodeURIComponent(currentUser.username.toLowerCase())}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          coins: G.coins, 
-          doubleJump: permBonuses.doubleJump,
-          extraLives: permBonuses.extraLives,
-          airDash: permBonuses.airDash
-        })
+      await database.ref(`users/${currentUser.uid}`).update({
+        coins: G.coins,
+        doubleJump: permBonuses.doubleJump,
+        extraLives: permBonuses.extraLives,
+        airDash: permBonuses.airDash
       });
     } catch (err) {
       console.error('Failed to save user data:', err);
@@ -5408,21 +5470,47 @@
     }
   }
 
-  // Check if already logged in
-  (async function checkSavedLogin() {
-    const saved = localStorage.getItem('ninja_user');
-    if (saved) {
+  // Check Firebase Auth state on page load
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      // User is signed in
       try {
-        currentUser = JSON.parse(saved);
+        const userDataSnapshot = await database.ref(`users/${user.uid}`).once('value');
+        const userData = userDataSnapshot.val() || {};
+        
+        currentUser = { 
+          username: userData.username || user.displayName || user.email.split('@')[0], 
+          email: user.email, 
+          uid: user.uid 
+        };
         nickname = currentUser.username;
-        await loadUserData(currentUser.username);
+        
+        // Load coins and bonuses
+        G.coins = userData.coins || 0;
+        permBonuses.doubleJump = userData.doubleJump || false;
+        permBonuses.extraLives = userData.extraLives || 0;
+        permBonuses.airDash = userData.airDash || false;
+        
+        localStorage.setItem('ninja_user', JSON.stringify(currentUser));
+        updateCoinsDisplay();
+        updateDojoUI();
         welcomeText.textContent = `Hoş geldin, ${currentUser.username}!`;
         showScreen('charSelect');
       } catch (e) {
+        console.error('Error loading user data:', e);
+        auth.signOut();
+      }
+    } else {
+      // User is signed out - check localStorage for backwards compatibility
+      const saved = localStorage.getItem('ninja_user');
+      if (saved) {
+        // Clear old localStorage data since Firebase says no user
         localStorage.removeItem('ninja_user');
       }
+      currentUser = null;
+      nickname = '';
     }
-  })();
+  });
 
   // ===== NICKNAME SCREEN =====
   nickInput.addEventListener('input', () => {
@@ -5495,10 +5583,19 @@
     viewLeaderboard('charSelect');
   });
 
-  // Çıkış yap butonu
-  logoutBtn.addEventListener('click', () => {
+  // Çıkış yap butonu - Firebase Auth signOut
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await auth.signOut();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     currentUser = null;
     nickname = '';
+    G.coins = 0;
+    permBonuses.doubleJump = false;
+    permBonuses.extraLives = 0;
+    permBonuses.airDash = false;
     localStorage.removeItem('ninja_user');
     // Reset form inputs
     loginUsername.value = '';
@@ -5525,59 +5622,81 @@
     viewLeaderboard('nickname');
   });
 
+  // Submit score to Firebase Database
   async function submitScore(score) {
     try {
-      // Save user data to Firebase
-      await saveUserData();
-
-      // Use secure server endpoint if session available
-      if (gameSessionToken) {
-        console.log('🔒 Submitting score via secure session');
-        const response = await fetch(`${SERVER_URL}/api/game/end`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionToken: gameSessionToken,
-            finalScore: Math.floor(score)
-          })
-        });
-        const result = await response.json();
-        gameSessionToken = null; // Session consumed
-        
-        if (response.ok) {
-          return { 
-            isNewHighScore: result.isNewHighScore, 
-            entry: { 
-              nickname, 
-              score: result.score,
-              character: selectedChar,
-              location: selectedLocation
-            }
-          };
-        } else {
-          console.warn('Score submission issue:', result);
-          // Still show leaderboard even if rejected
-          return { isNewHighScore: false, entry: { nickname, score: 0 } };
-        }
+      if (!currentUser || !currentUser.uid) {
+        console.warn('No user logged in');
+        return { isNewHighScore: false };
       }
 
-      // No session - score not saved (anti-cheat protection)
-      console.warn('⚠️ No game session - score will not be saved');
-      return { isNewHighScore: false, entry: { nickname, score: 0 } };
+      // Save user data (coins, bonuses)
+      await saveUserData();
+
+      const finalScore = Math.floor(score);
+      
+      // Basic anti-cheat: Check game duration
+      const gameDuration = (Date.now() - gameStartTime) / 1000;
+      const maxPossibleScore = gameDuration * 50; // Max 50 points per second
+      
+      if (finalScore > maxPossibleScore * 1.2) { // 20% tolerance
+        console.warn('🚨 Score seems too high for game duration');
+        return { isNewHighScore: false };
+      }
+
+      // Get current high score
+      const scoreRef = database.ref(`scores/${currentUser.uid}`);
+      const currentSnapshot = await scoreRef.once('value');
+      const currentData = currentSnapshot.val();
+      const currentHighScore = currentData?.score || 0;
+
+      const isNewHighScore = finalScore > currentHighScore;
+
+      if (isNewHighScore) {
+        // Save new high score
+        await scoreRef.set({
+          nickname: currentUser.username,
+          score: finalScore,
+          character: selectedChar,
+          location: selectedLocation,
+          timestamp: Date.now()
+        });
+        console.log('🏆 New high score saved!', finalScore);
+      }
+
+      return { 
+        isNewHighScore,
+        entry: { 
+          nickname: currentUser.username, 
+          score: finalScore,
+          character: selectedChar,
+          location: selectedLocation
+        }
+      };
     } catch (error) {
       console.error('Failed to submit score:', error);
       return null;
     }
   }
 
-  let leaderboardReturnTo = 'charSelect'; // Geri dönülecek ekran
+  let leaderboardReturnTo = 'charSelect';
 
+  // Fetch leaderboard from Firebase
   async function fetchLeaderboard() {
     try {
-      // Use server API instead of direct Firebase access
-      const response = await fetch(`${SERVER_URL}/api/scores`);
-      const data = await response.json();
-      return data || [];
+      const snapshot = await database.ref('scores')
+        .orderByChild('score')
+        .limitToLast(100)
+        .once('value');
+      
+      const data = snapshot.val();
+      if (!data) return [];
+      
+      // Convert to array and sort descending
+      const scores = Object.values(data)
+        .sort((a, b) => b.score - a.score);
+      
+      return scores;
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
       return [];
@@ -5724,26 +5843,9 @@
     // Apply location background to canvas
     canvas.style.background = loc.canvasBg;
 
-    // Start secure game session
-    try {
-      const response = await fetch(`${SERVER_URL}/api/game/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: nickname,
-          character: selectedChar,
-          location: selectedLocation
-        })
-      });
-      const data = await response.json();
-      if (data.sessionToken) {
-        gameSessionToken = data.sessionToken;
-        console.log('🎮 Game session started');
-      }
-    } catch (err) {
-      console.log('Could not start secure session, using fallback');
-      gameSessionToken = null;
-    }
+    // Start game session (client-side tracking for anti-cheat)
+    gameStartTime = Date.now();
+    console.log('🎮 Game session started');
 
     resetGame();
     requestAnimationFrame(gameLoop);
@@ -10201,19 +10303,6 @@
     G.dt = dt;
     
     if (!G.running) return;
-
-    // Send periodic score update to server (every 5 seconds)
-    if (gameSessionToken && Date.now() - lastScoreUpdate > 5000) {
-      lastScoreUpdate = Date.now();
-      fetch(`${SERVER_URL}/api/game/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionToken: gameSessionToken,
-          score: Math.floor(G.score)
-        })
-      }).catch(() => {}); // Silent fail, don't block game
-    }
 
     // Apply slow effect from Viagra item
     const speedMod = G.activeItem === 'viagra' ? 0.5 : 1;
