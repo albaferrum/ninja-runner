@@ -2513,6 +2513,11 @@
     inMatch: false,
     listener: null, // Firebase listener reference
     
+    // WebRTC
+    peerConnection: null,
+    dataChannel: null,
+    isConnected: false,
+    
     // Match state
     player: {
       x: 100,
@@ -3716,6 +3721,164 @@
     arenaOverlay.classList.remove('active');
   });
 
+  // ===== WebRTC Configuration =====
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+  };
+
+  // Create WebRTC peer connection
+  function createPeerConnection() {
+    const pc = new RTCPeerConnection(rtcConfig);
+    
+    pc.onicecandidate = async (event) => {
+      if (event.candidate && arenaState.roomId) {
+        // Send ICE candidate to Firebase
+        const path = arenaState.isHost ? 'hostCandidates' : 'guestCandidates';
+        try {
+          await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${path}.json`, {
+            method: 'POST',
+            body: JSON.stringify(event.candidate.toJSON())
+          });
+        } catch (err) {
+          console.error('Failed to send ICE candidate:', err);
+        }
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log('WebRTC connection state:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        arenaState.isConnected = true;
+        console.log('🎮 WebRTC P2P bağlantısı kuruldu!');
+      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        arenaState.isConnected = false;
+        console.log('WebRTC bağlantısı kesildi');
+      }
+    };
+
+    return pc;
+  }
+
+  // Setup data channel for game data
+  function setupDataChannel(channel) {
+    channel.onopen = () => {
+      console.log('📡 DataChannel açıldı - P2P aktif!');
+      arenaState.isConnected = true;
+    };
+
+    channel.onclose = () => {
+      console.log('DataChannel kapandı');
+      arenaState.isConnected = false;
+    };
+
+    channel.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handlePeerMessage(data);
+      } catch (err) {
+        console.error('Failed to parse peer message:', err);
+      }
+    };
+
+    arenaState.dataChannel = channel;
+  }
+
+  // Handle incoming peer messages
+  function handlePeerMessage(data) {
+    console.log('📨 Peer message received:', data.type, data); // DEBUG
+    
+    if (data.type === 'position') {
+      // Update opponent position
+      arenaState.opponent.targetX = data.x;
+      arenaState.opponent.targetY = data.y;
+      arenaState.opponent.facingRight = data.facingRight;
+      // Note: opponent HP from position is their view, not authoritative for us
+    } else if (data.type === 'projectile') {
+      // Opponent fired a projectile - add it to our view (reversed)
+      const proj = {
+        ...data.proj,
+        x: 480 - data.proj.x, // Mirror X position
+        vx: -data.proj.vx,    // Reverse velocity
+        isPlayer: false       // It's opponent's projectile
+      };
+      arenaState.projectiles.push(proj);
+    } else if (data.type === 'damage') {
+      // We got hit!
+      console.log('💥 Received damage:', data.amount, 'Current HP:', arenaState.player.hp);
+      arenaState.player.hp -= data.amount;
+      console.log('💔 New HP:', arenaState.player.hp);
+      
+      if (arenaState.player.hp <= 0) {
+        arenaState.player.hp = 0;
+        console.log('☠️ We died! Ending match...');
+        endArenaMatch(false);
+      }
+    } else if (data.type === 'matchEnd') {
+      // Opponent says match ended
+      console.log('🏁 Match end message received:', data);
+      if (data.winner === 'me') {
+        // Opponent won, we lost
+        endArenaMatch(false);
+      }
+    }
+  }
+
+  // Send data to peer
+  function sendToPeer(data) {
+    if (arenaState.dataChannel && arenaState.dataChannel.readyState === 'open') {
+      arenaState.dataChannel.send(JSON.stringify(data));
+    }
+  }
+
+  // Poll for ICE candidates from Firebase
+  async function pollIceCandidates() {
+    if (!arenaState.roomId || !arenaState.peerConnection) return;
+    
+    const path = arenaState.isHost ? 'guestCandidates' : 'hostCandidates';
+    
+    try {
+      const response = await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${path}.json`);
+      const candidates = await response.json();
+      
+      if (candidates) {
+        for (const key of Object.keys(candidates)) {
+          const candidate = candidates[key];
+          if (candidate && !candidate._added) {
+            try {
+              await arenaState.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+              // Mark as added
+              await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${path}/${key}/_added.json`, {
+                method: 'PUT',
+                body: JSON.stringify(true)
+              });
+            } catch (err) {
+              console.error('Failed to add ICE candidate:', err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to poll ICE candidates:', err);
+    }
+  }
+
+  // Clean up WebRTC
+  function cleanupWebRTC() {
+    if (arenaState.dataChannel) {
+      arenaState.dataChannel.close();
+      arenaState.dataChannel = null;
+    }
+    if (arenaState.peerConnection) {
+      arenaState.peerConnection.close();
+      arenaState.peerConnection = null;
+    }
+    arenaState.isConnected = false;
+  }
+
   // Load arena rooms from Firebase
   async function loadArenaRooms() {
     arenaRoomList.innerHTML = '<div class="arena-no-rooms">Yükleniyor...</div>';
@@ -3768,6 +3931,21 @@
     
     const roomId = generateRoomCode();
     
+    // Create WebRTC peer connection as host
+    cleanupWebRTC();
+    arenaState.peerConnection = createPeerConnection();
+    
+    // Host creates the data channel
+    const dataChannel = arenaState.peerConnection.createDataChannel('arena', {
+      ordered: false, // UDP-like for lower latency
+      maxRetransmits: 0
+    });
+    setupDataChannel(dataChannel);
+    
+    // Create offer
+    const offer = await arenaState.peerConnection.createOffer();
+    await arenaState.peerConnection.setLocalDescription(offer);
+    
     const roomData = {
       host: {
         name: currentUser.username,
@@ -3779,7 +3957,8 @@
       },
       guest: null,
       status: 'waiting',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      offer: offer.sdp // Store WebRTC offer
     };
     
     try {
@@ -3796,6 +3975,7 @@
     } catch (err) {
       console.error('Failed to create room:', err);
       alert('Oda oluşturulamadı!');
+      cleanupWebRTC();
     }
   });
 
@@ -3823,6 +4003,34 @@
         return;
       }
       
+      // Create WebRTC peer connection as guest
+      cleanupWebRTC();
+      arenaState.peerConnection = createPeerConnection();
+      
+      // Guest receives data channel from host
+      arenaState.peerConnection.ondatachannel = (event) => {
+        setupDataChannel(event.channel);
+      };
+      
+      // Set remote description (host's offer)
+      if (currentRoom.offer) {
+        const offerDesc = new RTCSessionDescription({
+          type: 'offer',
+          sdp: currentRoom.offer
+        });
+        await arenaState.peerConnection.setRemoteDescription(offerDesc);
+        
+        // Create and send answer
+        const answer = await arenaState.peerConnection.createAnswer();
+        await arenaState.peerConnection.setLocalDescription(answer);
+        
+        // Save answer to Firebase
+        await fetch(`${FIREBASE_URL}/arena/${roomId}/answer.json`, {
+          method: 'PUT',
+          body: JSON.stringify(answer.sdp)
+        });
+      }
+      
       // Join the room
       const guestData = {
         name: currentUser.username,
@@ -3846,6 +4054,7 @@
     } catch (err) {
       console.error('Failed to join room:', err);
       alert('Odaya katılınamadı!');
+      cleanupWebRTC();
     }
   }
 
@@ -3907,6 +4116,8 @@
       clearInterval(arenaState.listener);
     }
     
+    let answerProcessed = false;
+    
     // Poll for changes every 500ms
     arenaState.listener = setInterval(async () => {
       try {
@@ -3923,6 +4134,31 @@
         }
         
         updateLobbyPlayers(room);
+        
+        // WebRTC: Host receives answer from guest
+        if (arenaState.isHost && room.answer && !answerProcessed && arenaState.peerConnection) {
+          answerProcessed = true;
+          try {
+            const answerDesc = new RTCSessionDescription({
+              type: 'answer',
+              sdp: room.answer
+            });
+            await arenaState.peerConnection.setRemoteDescription(answerDesc);
+            console.log('WebRTC: Answer received and set');
+          } catch (err) {
+            console.error('Failed to set answer:', err);
+          }
+        }
+        
+        // Poll ICE candidates
+        await pollIceCandidates();
+        
+        // Show WebRTC connection status
+        if (arenaState.isConnected) {
+          arenaRoomCode.textContent = `Oda: ${roomId} 🟢 P2P Bağlı`;
+        } else if (room.guest) {
+          arenaRoomCode.textContent = `Oda: ${roomId} 🟡 Bağlanıyor...`;
+        }
         
         // Check if both players are ready
         if (room.host?.ready && room.guest?.ready && room.status === 'waiting') {
@@ -3977,6 +4213,9 @@
       clearInterval(arenaState.listener);
       arenaState.listener = null;
     }
+    
+    // Clean up WebRTC
+    cleanupWebRTC();
     
     if (arenaState.roomId) {
       try {
@@ -4068,6 +4307,8 @@
     arenaState.opponent = {
       x: arenaState.isHost ? 380 : 100,
       y: 460,
+      targetX: arenaState.isHost ? 380 : 100,
+      targetY: 460,
       hp: 100,
       maxHp: 100,
       charKey: oppData.charKey,
@@ -4143,6 +4384,12 @@
     G.t += dt;
     
     const p = arenaState.player;
+    const opp = arenaState.opponent;
+    
+    // Interpolate opponent position for smooth movement
+    const lerpSpeed = 12; // Higher = faster catch up
+    opp.x += (opp.targetX - opp.x) * Math.min(1, lerpSpeed * dt);
+    opp.y += (opp.targetY - opp.y) * Math.min(1, lerpSpeed * dt);
     
     // Movement
     if (p.stunned <= 0) {
@@ -4188,9 +4435,8 @@
       proj.y += (proj.vy || 0) * dt;
       proj.life -= dt;
       
-      // Check collision with opponent
+      // Check collision with opponent (use interpolated position)
       if (proj.isPlayer) {
-        const opp = arenaState.opponent;
         if (Math.abs(proj.x - opp.x) < 40 && Math.abs(proj.y - opp.y) < 60) {
           // Hit opponent
           damageOpponent(proj.damage || 10);
@@ -4266,22 +4512,30 @@
       projData.damage = 22;
       projData.life = 0.25;
       projData.vx = projVx * 0.3;
-    } else if (skillAction === 'poisonSpit') {
+    } else if (skillAction === 'poisonShot') {
+      // Teki: Poison shot
       projData.color = '#2ecc71';
-      projData.damage = 10;
-    } else if (skillAction === 'animalCall') {
-      projData.color = '#8b4513';
-      projData.radius = 8;
+      projData.radius = 12;
+      projData.damage = 15;
+    } else if (skillAction === 'needleThrow') {
+      // Susumu: Needle throw - multiple needles
+      projData.color = '#c0392b';
+      projData.radius = 5;
       projData.damage = 8;
-      // Multiple small projectiles
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         arenaState.projectiles.push({
           ...projData,
-          y: p.y - 30 + (i - 1) * 20,
-          vx: projVx * (0.8 + i * 0.1)
+          y: p.y - 30 + (i - 2) * 15,
+          vx: projVx * (0.9 + i * 0.05)
         });
       }
       return;
+    } else if (skillAction === 'eyeBeam') {
+      // Shinji: Eye beam
+      projData.color = '#9b59b6';
+      projData.radius = 14;
+      projData.damage = 18;
+      projData.vx = projVx * 1.2;
     } else if (skillAction === 'illusionKill') {
       projData.color = '#9b59b6';
       projData.radius = 16;
@@ -4387,15 +4641,26 @@
         life: 1.5, damage: 55, isPlayer: true,
         type: 'headbutt', color: '#ecf0f1', radius: 40
       });
-    } else if (skillAction === 'poisonArmor') {
-      // Teki: Poison cloud
-      for (let i = 0; i < 6; i++) {
-        arenaState.projectiles.push({
-          x: projX + rand(-30, 30), y: p.y - 30 + rand(-30, 30),
-          vx: projVx * 0.5, vy: rand(-50, 50),
-          life: 3, damage: 8, isPlayer: true,
-          type: 'poison', color: '#2ecc71', radius: 18
-        });
+    } else if (skillAction === 'monkeyFriend') {
+      // Teki: Monkey friend attack
+      arenaState.projectiles.push({
+        x: projX, y: p.y - 30, vx: projVx * 1.2, vy: 0,
+        life: 3, damage: 35, isPlayer: true,
+        type: 'monkey', color: '#8b4513', radius: 25
+      });
+      // Monkey throws bananas
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+          if (!arenaState.active) return;
+          arenaState.projectiles.push({
+            x: projX + (p.facingRight ? 50 : -50),
+            y: p.y - 40,
+            vx: projVx * 0.8,
+            vy: rand(-150, 150),
+            life: 1.5, damage: 10, isPlayer: true,
+            type: 'banana', color: '#f1c40f', radius: 8
+          });
+        }, i * 300);
       }
     } else if (skillAction === 'animalFriends') {
       // Susumu: Animal stampede
@@ -4503,15 +4768,36 @@
 
   // Damage opponent
   async function damageOpponent(damage) {
-    arenaState.opponent.hp -= damage;
+    console.log('⚔️ Dealing damage:', damage, 'WebRTC connected:', arenaState.isConnected);
     
-    // Sync damage to Firebase
+    // Send damage via WebRTC (instant!)
+    if (arenaState.isConnected && arenaState.dataChannel?.readyState === 'open') {
+      console.log('📤 Sending damage via WebRTC');
+      sendToPeer({ type: 'damage', amount: damage });
+      arenaState.opponent.hp -= damage; // Local prediction
+      
+      if (arenaState.opponent.hp <= 0) {
+        arenaState.opponent.hp = 0;
+        endArenaMatch(true);
+      }
+      return;
+    }
+    
+    // Fallback to Firebase - write pendingDamage for opponent to read
+    console.log('📤 Sending damage via Firebase fallback');
+    arenaState.opponent.hp -= damage; // Local prediction
+    
     if (arenaState.roomId) {
+      const myPath = arenaState.isHost ? 'host' : 'guest';
       const oppPath = arenaState.isHost ? 'guest' : 'host';
       try {
-        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/hp.json`, {
+        // Write damage to opponent's pendingDamage field
+        const response = await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/pendingDamage.json`);
+        const currentDamage = await response.json() || 0;
+        
+        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}/pendingDamage.json`, {
           method: 'PUT',
-          body: JSON.stringify(Math.max(0, arenaState.opponent.hp))
+          body: JSON.stringify(currentDamage + damage)
         });
       } catch (err) {
         console.error('Failed to sync damage:', err);
@@ -4524,63 +4810,89 @@
     }
   }
 
-  // Sync player state to Firebase
+  // Sync player state via WebRTC (or fallback to Firebase)
   let lastSyncTime = 0;
   async function syncArenaState() {
     if (!arenaState.roomId || !arenaState.active) return;
     
     const now = Date.now();
-    if (now - lastSyncTime < 100) return; // Sync every 100ms
+    if (now - lastSyncTime < 16) return; // ~60fps for WebRTC, will be throttled for Firebase
     lastSyncTime = now;
     
-    const playerPath = arenaState.isHost ? 'host' : 'guest';
     const p = arenaState.player;
+    
+    // Use WebRTC if connected (much faster!)
+    if (arenaState.isConnected && arenaState.dataChannel?.readyState === 'open') {
+      // Send position via P2P - super fast!
+      sendToPeer({
+        type: 'position',
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        hp: p.hp,
+        facingRight: p.facingRight
+      });
+      return; // Don't use Firebase when WebRTC is active
+    }
+    
+    // Fallback to Firebase (slower, only if WebRTC not available)
+    if (now - lastSyncTime < 100) return; // Throttle Firebase to 100ms
+    
+    const playerPath = arenaState.isHost ? 'host' : 'guest';
     
     try {
       await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}.json`, {
         method: 'PATCH',
         body: JSON.stringify({
-          x: p.x,
-          y: p.y,
+          x: Math.round(p.x),
+          y: Math.round(p.y),
           hp: p.hp,
           facingRight: p.facingRight
         })
       });
       
-      // Also fetch opponent state and room status
+      // Also fetch opponent state, our pending damage, and room status
       const oppPath = arenaState.isHost ? 'guest' : 'host';
-      const [oppResponse, roomResponse] = await Promise.all([
+      const [oppResponse, myDataResponse, roomResponse] = await Promise.all([
         fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${oppPath}.json`),
+        fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}.json`),
         fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/status.json`)
       ]);
       const oppData = await oppResponse.json();
+      const myData = await myDataResponse.json();
       const roomStatus = await roomResponse.json();
       
       // Check if match was ended by opponent
       if (roomStatus === 'finished') {
-        // Opponent ended the match - we lost
         endArenaMatch(false);
         return;
       }
       
-      if (oppData) {
-        arenaState.opponent.x = oppData.x || arenaState.opponent.x;
-        arenaState.opponent.y = oppData.y || arenaState.opponent.y;
-        arenaState.opponent.hp = oppData.hp ?? arenaState.opponent.hp;
+      // Check for pending damage from opponent
+      if (myData?.pendingDamage && myData.pendingDamage > 0) {
+        arenaState.player.hp -= myData.pendingDamage;
+        console.log('Received damage:', myData.pendingDamage, 'HP now:', arenaState.player.hp);
         
-        // Check if opponent's HP is 0 (we won)
-        if (arenaState.opponent.hp <= 0) {
-          endArenaMatch(true);
+        // Clear pending damage
+        await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/${playerPath}/pendingDamage.json`, {
+          method: 'PUT',
+          body: JSON.stringify(0)
+        });
+        
+        if (arenaState.player.hp <= 0) {
+          arenaState.player.hp = 0;
+          endArenaMatch(false);
           return;
         }
+      }
+      
+      if (oppData) {
+        arenaState.opponent.targetX = oppData.x ?? arenaState.opponent.targetX;
+        arenaState.opponent.targetY = oppData.y ?? arenaState.opponent.targetY;
+        arenaState.opponent.facingRight = oppData.facingRight ?? arenaState.opponent.facingRight;
         
-        // Check if we lost
-        if (arenaState.player.hp <= 0) {
-          endArenaMatch(false);
-        }
+        // Don't override opponent HP from Firebase - we track it locally from damage
       }
     } catch (err) {
-      // Room might be deleted - match ended
       if (!arenaState.active) return;
       console.error('Sync error:', err);
     }
@@ -4591,12 +4903,20 @@
     if (!arenaState.active) return; // Prevent double calls
     arenaState.active = false;
     
+    // Notify opponent via WebRTC
+    if (arenaState.isConnected) {
+      sendToPeer({ type: 'matchEnd', winner: won ? 'me' : 'opponent' });
+    }
+    
+    // Clean up WebRTC
+    cleanupWebRTC();
+    
     if (arenaState.listener) {
       clearInterval(arenaState.listener);
       arenaState.listener = null;
     }
     
-    // Mark room as finished in Firebase so opponent knows
+    // Mark room as finished in Firebase so opponent knows (fallback)
     if (arenaState.roomId && won) {
       try {
         await fetch(`${FIREBASE_URL}/arena/${arenaState.roomId}/status.json`, {
@@ -4752,22 +5072,231 @@
     selectedChar = origSelectedChar;
     G.groundY = origGroundY;
     
-    // Draw projectiles
+    // Draw projectiles with character-specific visuals
     arenaState.projectiles.forEach(proj => {
       ctx.save();
-      // Glow effect
       ctx.shadowColor = proj.color || '#ff6b6b';
       ctx.shadowBlur = 15;
-      ctx.fillStyle = proj.color || '#ff6b6b';
-      ctx.beginPath();
-      ctx.arc(proj.x, proj.y, proj.radius || 12, 0, Math.PI * 2);
-      ctx.fill();
       
-      // Inner bright core
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(proj.x, proj.y, (proj.radius || 12) * 0.4, 0, Math.PI * 2);
-      ctx.fill();
+      const t = proj.type;
+      
+      // Shuriken - spinning star
+      if (t === 'shuriken') {
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate((G.t * 15) % (Math.PI * 2));
+        ctx.fillStyle = '#888';
+        for (let i = 0; i < 4; i++) {
+          ctx.rotate(Math.PI / 2);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(-4, -12);
+          ctx.lineTo(0, -10);
+          ctx.lineTo(4, -12);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      // Spear extend - long rectangle
+      else if (t === 'spearExtend') {
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillRect(proj.x - 40, proj.y - 3, 80, 6);
+        ctx.fillStyle = '#ff6b6b';
+        ctx.beginPath();
+        ctx.moveTo(proj.x + 40, proj.y);
+        ctx.lineTo(proj.x + 55, proj.y - 6);
+        ctx.lineTo(proj.x + 55, proj.y + 6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Water ball
+      else if (t === 'waterBall') {
+        ctx.fillStyle = 'rgba(52, 152, 219, 0.7)';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(proj.x - 4, proj.y - 4, proj.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Katana slash - arc
+      else if (t === 'katanaSlash') {
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 25, -0.5, 0.5);
+        ctx.stroke();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      // Punch - fist
+      else if (t === 'punch') {
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('👊', proj.x, proj.y + 5);
+      }
+      // Poison shot
+      else if (t === 'poisonShot') {
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.arc(proj.x + 3, proj.y - 2, proj.radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Needle
+      else if (t === 'needleThrow') {
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(proj.x - 8, proj.y);
+        ctx.lineTo(proj.x + 8, proj.y);
+        ctx.stroke();
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(proj.x + 8, proj.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Eye beam
+      else if (t === 'eyeBeam') {
+        ctx.fillStyle = '#9b59b6';
+        ctx.beginPath();
+        ctx.ellipse(proj.x, proj.y, 18, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Eagle
+      else if (t === 'eagle') {
+        ctx.fillStyle = '#8b5cf6';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🦅', proj.x, proj.y + 12);
+      }
+      // Fire dragon
+      else if (t === 'fireDragon') {
+        ctx.fillStyle = '#e74c3c';
+        ctx.font = 'bold 50px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐲', proj.x, proj.y + 15);
+      }
+      // Monkey
+      else if (t === 'monkey') {
+        ctx.fillStyle = '#8b4513';
+        ctx.font = 'bold 35px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐵', proj.x, proj.y + 10);
+      }
+      // Arrow
+      else if (t === 'arrow' || t === 'arrowShot') {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(proj.x - 12, proj.y);
+        ctx.lineTo(proj.x + 8, proj.y);
+        ctx.stroke();
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.moveTo(proj.x + 8, proj.y);
+        ctx.lineTo(proj.x + 14, proj.y - 4);
+        ctx.lineTo(proj.x + 14, proj.y + 4);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Lightning
+      else if (t === 'lightning') {
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(proj.x - 10, proj.y - 8);
+        ctx.lineTo(proj.x, proj.y);
+        ctx.lineTo(proj.x - 5, proj.y);
+        ctx.lineTo(proj.x + 10, proj.y + 10);
+        ctx.stroke();
+      }
+      // Ice
+      else if (t === 'ice' || t === 'iceStorm') {
+        ctx.fillStyle = '#67e8f9';
+        ctx.beginPath();
+        ctx.moveTo(proj.x, proj.y - 10);
+        ctx.lineTo(proj.x + 8, proj.y + 8);
+        ctx.lineTo(proj.x - 8, proj.y + 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Wind
+      else if (t === 'windWave' || t === 'windSword') {
+        ctx.strokeStyle = '#87ceeb';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+          ctx.arc(proj.x + i * 8, proj.y, 8, Math.PI * 0.5, Math.PI * 1.5);
+        }
+        ctx.stroke();
+      }
+      // Paper
+      else if (t === 'paper' || t === 'paperThrow') {
+        ctx.fillStyle = '#ecf0f1';
+        ctx.save();
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(G.t * 5);
+        ctx.fillRect(-6, -8, 12, 16);
+        ctx.restore();
+      }
+      // Shadow clone
+      else if (t === 'shadowClone') {
+        ctx.fillStyle = 'rgba(142, 68, 173, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(proj.x, proj.y, 15, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Crow / dark
+      else if (t === 'darkCrow' || t === 'crowFeather') {
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐦‍⬛', proj.x, proj.y + 8);
+      }
+      // Kiss
+      else if (t === 'kissThrow') {
+        ctx.fillStyle = '#ff69b4';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('💋', proj.x, proj.y + 8);
+      }
+      // Kunai
+      else if (t === 'kunaiThrow') {
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.moveTo(proj.x + 12, proj.y);
+        ctx.lineTo(proj.x - 4, proj.y - 4);
+        ctx.lineTo(proj.x - 8, proj.y);
+        ctx.lineTo(proj.x - 4, proj.y + 4);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Default circle projectile
+      else {
+        ctx.fillStyle = proj.color || '#ff6b6b';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.radius || 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, (proj.radius || 12) * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
       ctx.restore();
     });
     
@@ -4800,6 +5329,17 @@
     // Draw HP bars
     drawArenaHPBar(arenaState.player, 20, 20, true);
     drawArenaHPBar(arenaState.opponent, 260, 20, false);
+    
+    // Draw WebRTC connection status
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'right';
+    if (arenaState.isConnected) {
+      ctx.fillStyle = '#4ade80';
+      ctx.fillText('🟢 P2P Bağlı', 470, 55);
+    } else {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText('🟡 Firebase', 470, 55);
+    }
     
     // Draw skill cooldowns
     drawArenaSkillUI();
