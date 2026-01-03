@@ -5587,42 +5587,9 @@
         }
       }
 
-      // Fallback: Use Firebase directly (limited/capped scores)
-      console.log('⚠️ Using fallback score submission');
-      const response = await fetch(`${FIREBASE_URL}/scores.json`);
-      const data = await response.json();
-      const scores = data ? Object.entries(data).map(([key, val]) => ({ ...val, _key: key })) : [];
-      
-      // Oyuncunun mevcut skorunu bul
-      const existingEntry = scores.find(s => s.nickname.toLowerCase() === nickname.toLowerCase());
-      
-      const newEntry = {
-        nickname: nickname.slice(0, 16),
-        score: Math.floor(score),
-        character: selectedChar,
-        location: selectedLocation,
-        date: new Date().toISOString()
-      };
-      
-      if (existingEntry) {
-        // Sadece yeni skor daha yüksekse güncelle
-        if (score > existingEntry.score) {
-          await fetch(`${FIREBASE_URL}/scores/${existingEntry._key}.json`, {
-            method: 'PUT',
-            body: JSON.stringify(newEntry)
-          });
-          return { isNewHighScore: true, entry: newEntry };
-        } else {
-          return { isNewHighScore: false, entry: existingEntry };
-        }
-      } else {
-        // Yeni oyuncu ekle
-        await fetch(`${FIREBASE_URL}/scores.json`, {
-          method: 'POST',
-          body: JSON.stringify(newEntry)
-        });
-        return { isNewHighScore: true, entry: newEntry };
-      }
+      // No session - score not saved (anti-cheat protection)
+      console.warn('⚠️ No game session - score will not be saved');
+      return { isNewHighScore: false, entry: { nickname, score: 0 } };
     } catch (error) {
       console.error('Failed to submit score:', error);
       return null;
@@ -5633,20 +5600,13 @@
 
   async function fetchLeaderboard() {
     try {
-      const response = await fetch(`${FIREBASE_URL}/scores.json`);
+      // Use server API instead of direct Firebase access
+      const response = await fetch(`${SERVER_URL}/api/scores`);
       const data = await response.json();
-      
-      if (!data) return [];
-      
-      // Firebase objesini diziye çevir ve sırala
-      const scores = Object.values(data)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 50);
-      
-      return scores;
+      return data || [];
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
-      return null;
+      return [];
     }
   }
 

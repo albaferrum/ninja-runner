@@ -225,74 +225,13 @@ app.get('/api/scores', (req, res) => {
   }
 });
 
-// Add a new score (DEPRECATED - use /api/game/end instead)
-// Kept for backwards compatibility but with rate limiting
-const scoreSubmitTimes = new Map();
-
+// POST scores is DISABLED - must use secure /api/game/end
 app.post('/api/scores', (req, res) => {
-  try {
-    const { nickname, score, character, location, sessionToken } = req.body;
-    
-    // If sessionToken provided, redirect to secure endpoint
-    if (sessionToken) {
-      return res.status(400).json({ 
-        error: 'Use /api/game/end for secure score submission' 
-      });
-    }
-    
-    if (!nickname || typeof score !== 'number') {
-      return res.status(400).json({ error: 'Invalid data' });
-    }
-    
-    // Rate limiting: max 1 score per 30 seconds per nickname
-    const lastSubmit = scoreSubmitTimes.get(nickname.toLowerCase());
-    const now = Date.now();
-    if (lastSubmit && now - lastSubmit < 30000) {
-      return res.status(429).json({ error: 'Rate limit: wait 30 seconds' });
-    }
-    scoreSubmitTimes.set(nickname.toLowerCase(), now);
-    
-    // Cap maximum score for non-session submissions
-    const maxAllowedScore = 5000;
-    const cappedScore = Math.min(score, maxAllowedScore);
-    
-    if (score > maxAllowedScore) {
-      console.log(`⚠️ Score capped for ${nickname}: ${score} -> ${cappedScore}`);
-    }
-    
-    const scores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8'));
-    
-    // Check if player already has a score
-    const existingIndex = scores.findIndex(s => s.nickname.toLowerCase() === nickname.toLowerCase());
-    
-    const newEntry = {
-      nickname: nickname.slice(0, 16),
-      score: Math.floor(cappedScore),
-      character: character || 'unknown',
-      location: location || 'dark',
-      date: new Date().toISOString(),
-      verified: false // Mark as unverified
-    };
-    
-    if (existingIndex !== -1) {
-      // Update only if new score is higher
-      if (cappedScore > scores[existingIndex].score) {
-        scores[existingIndex] = newEntry;
-        fs.writeFileSync(SCORES_FILE, JSON.stringify(scores, null, 2));
-        res.json({ message: 'High score updated!', isNewHighScore: true, entry: newEntry });
-      } else {
-        res.json({ message: 'Score recorded', isNewHighScore: false, entry: scores[existingIndex] });
-      }
-    } else {
-      // Add new entry
-      scores.push(newEntry);
-      fs.writeFileSync(SCORES_FILE, JSON.stringify(scores, null, 2));
-      res.json({ message: 'Score added!', isNewHighScore: true, entry: newEntry });
-    }
-  } catch (error) {
-    console.error('Error saving score:', error);
-    res.status(500).json({ error: 'Failed to save score' });
-  }
+  console.log('🚫 Blocked direct score submission attempt');
+  res.status(403).json({ 
+    error: 'Direct score submission disabled. Nice try! 😎',
+    hint: 'Scores can only be submitted through verified game sessions.'
+  });
 });
 
 // Get player's best score
