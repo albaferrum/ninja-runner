@@ -4385,13 +4385,16 @@
     
     // Listen for damage to our player
     const myPath = arenaState.isHost ? 'host' : 'guest';
+    let lastDamageProcessed = 0;
     arenaState.damageListener = database.ref(`arena/${roomId}/${myPath}/pendingDamage`).on('value', (snapshot) => {
       const damage = snapshot.val();
-      if (damage && damage > 0 && arenaState.active) {
+      // Only process if damage is a positive number and different from last processed
+      if (damage && damage > 0 && arenaState.active && damage !== lastDamageProcessed) {
         console.log('💥 Received damage from Firebase:', damage);
+        lastDamageProcessed = damage;
         arenaState.player.hp -= damage;
-        // Clear the pending damage
-        database.ref(`arena/${roomId}/${myPath}/pendingDamage`).set(0);
+        // Clear the pending damage with null
+        database.ref(`arena/${roomId}/${myPath}/pendingDamage`).set(null);
         
         if (arenaState.player.hp <= 0) {
           arenaState.player.hp = 0;
@@ -4514,10 +4517,11 @@
       proj.y += (proj.vy || 0) * dt;
       proj.life -= dt;
       
-      // Check collision with opponent (use interpolated position)
-      if (proj.isPlayer) {
+      // Check collision with opponent (use interpolated position) - only once per projectile
+      if (proj.isPlayer && !proj.hasHit) {
         if (Math.abs(proj.x - opp.x) < 40 && Math.abs(proj.y - opp.y) < 60) {
           // Hit opponent
+          proj.hasHit = true;
           damageOpponent(proj.damage || 10);
           return false;
         }
