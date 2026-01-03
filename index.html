@@ -4411,6 +4411,17 @@
       }
     });
     
+    // Listen for opponent skills
+    let lastSkillTimestamp = 0;
+    arenaState.skillListener = database.ref(`arena/${roomId}/${oppPath}/lastSkill`).on('value', (snapshot) => {
+      const skill = snapshot.val();
+      if (skill && skill.timestamp > lastSkillTimestamp && arenaState.active) {
+        lastSkillTimestamp = skill.timestamp;
+        console.log('🎯 Opponent used skill:', skill.type);
+        spawnOpponentProjectile(skill);
+      }
+    });
+    
     // Start arena game loop
     console.log('Starting arena game loop'); // DEBUG
     requestAnimationFrame(arenaGameLoop);
@@ -4662,6 +4673,9 @@
     
     arenaState.projectiles.push(projData);
     
+    // Sync skill to opponent via Firebase
+    syncSkillToOpponent('X', projData);
+    
     // Particles
     for (let i = 0; i < 8; i++) {
       arenaState.particles.push({
@@ -4844,6 +4858,9 @@
       });
     }
     
+    // Sync ultimate skill to opponent via Firebase
+    syncSkillToOpponent('F', { charKey: p.charKey, x: p.x, y: p.y, facingRight: p.facingRight });
+    
     // Big particle burst
     for (let i = 0; i < 20; i++) {
       arenaState.particles.push({
@@ -4853,6 +4870,80 @@
         vy: rand(-150, 150),
         life: rand(0.3, 0.6),
         color: char.color
+      });
+    }
+  }
+
+  // Sync skill usage to opponent
+  function syncSkillToOpponent(skillType, data) {
+    if (!arenaState.roomId || !arenaState.active) return;
+    
+    const playerPath = arenaState.isHost ? 'host' : 'guest';
+    const skillData = {
+      type: skillType,
+      charKey: arenaState.player.charKey,
+      x: arenaState.player.x,
+      y: arenaState.player.y,
+      facingRight: arenaState.player.facingRight,
+      timestamp: Date.now()
+    };
+    
+    database.ref(`arena/${arenaState.roomId}/${playerPath}/lastSkill`).set(skillData);
+  }
+
+  // Spawn opponent's projectile (visual only, no damage calculation)
+  function spawnOpponentProjectile(skill) {
+    const char = CHARACTERS[skill.charKey];
+    if (!char) return;
+    
+    // Mirror the position and direction for our view
+    const x = skill.x;
+    const y = skill.y;
+    const facingRight = skill.facingRight;
+    const projX = facingRight ? x + 40 : x - 40;
+    const projVx = facingRight ? 500 : -500;
+    
+    const color = char.color;
+    
+    if (skill.type === 'X') {
+      // Basic skill projectile (visual only, isPlayer = false so no damage)
+      arenaState.projectiles.push({
+        x: projX,
+        y: y - 30,
+        vx: projVx,
+        vy: 0,
+        life: 1.5,
+        damage: 0, // No damage - opponent handles hit detection
+        isPlayer: false,
+        type: char.skillX.action,
+        color: color,
+        radius: 12
+      });
+    } else if (skill.type === 'F') {
+      // Ultimate skill projectile (visual only)
+      arenaState.projectiles.push({
+        x: projX,
+        y: y - 30,
+        vx: projVx,
+        vy: 0,
+        life: 2,
+        damage: 0,
+        isPlayer: false,
+        type: 'ultimate',
+        color: color,
+        radius: 25
+      });
+    }
+    
+    // Particles for visual feedback
+    for (let i = 0; i < 5; i++) {
+      arenaState.particles.push({
+        x: projX,
+        y: y - 30,
+        vx: rand(-50, 50) + projVx * 0.2,
+        vy: rand(-50, 50),
+        life: rand(0.2, 0.4),
+        color: color
       });
     }
   }
@@ -4957,6 +5048,11 @@
       const myPath = arenaState.isHost ? 'host' : 'guest';
       database.ref(`arena/${arenaState.roomId}/${myPath}/pendingDamage`).off('value', arenaState.damageListener);
       arenaState.damageListener = null;
+    }
+    if (arenaState.skillListener) {
+      const oppPath = arenaState.isHost ? 'guest' : 'host';
+      database.ref(`arena/${arenaState.roomId}/${oppPath}/lastSkill`).off('value', arenaState.skillListener);
+      arenaState.skillListener = null;
     }
     
     // Notify opponent via WebRTC
