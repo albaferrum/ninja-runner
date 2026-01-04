@@ -796,6 +796,32 @@
       font-weight: 700;
       font-size: 12px;
     }
+    .item-slot .slot-count {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+    .shop-item .item-count {
+      display: inline-block;
+      background: rgba(34,197,94,0.3);
+      color: #22c55e;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Shop button in game */
     .shop-btn {
@@ -2794,8 +2820,8 @@
 
     // Coin & Item system
     coins: 0,
-    ownedItems: [], // Purchased items
-    itemSlots: [null, null, null], // 3 item slots
+    itemInventory: {}, // { itemId: count } - multi-buy support
+    itemSlots: [null, null, null], // 3 item slots - now stores { id, count }
     activeItem: null, // Currently active item effect
     activeItemTimer: 0,
     itemCooldowns: [0, 0, 0], // Cooldowns for each slot
@@ -2949,23 +2975,23 @@
     coinPill.textContent = `🪙 ${G.coins}`;
     
     shopGrid.innerHTML = SPECIAL_ITEMS.map(item => {
-      const owned = G.ownedItems.includes(item.id);
+      const ownedCount = G.itemInventory[item.id] || 0;
       const canAfford = G.coins >= item.price;
-      const inSlot = G.itemSlots.includes(item.id);
+      const inSlotCount = getItemCountInSlots(item.id);
       
       return `
-        <div class="shop-item ${owned ? 'owned' : ''}">
+        <div class="shop-item ${ownedCount > 0 ? 'owned' : ''}">
           <div class="item-icon">${item.icon}</div>
-          <div class="item-name">${item.name}</div>
+          <div class="item-name">${item.name}${ownedCount > 0 ? `<span class="item-count">x${ownedCount}</span>` : ''}</div>
           <div class="item-desc">${item.description}</div>
           <div class="item-price">
-            <span class="price-tag">${owned ? '✅ Satın Alındı' : `🪙 ${item.price}`}</span>
-            ${owned ? 
-              (inSlot ? 
-                `<button class="buy-btn" disabled>Slotta</button>` :
-                `<button class="buy-btn" onclick="equipItem('${item.id}')">Kuşan</button>`
-              ) :
-              `<button class="buy-btn" ${!canAfford ? 'disabled' : ''} onclick="buyItem('${item.id}')">Satın Al</button>`
+            <span class="price-tag">🪙 ${item.price}</span>
+            <button class="buy-btn" ${!canAfford ? 'disabled' : ''} onclick="buyItem('${item.id}')">
+              ${ownedCount > 0 ? '+1 Al' : 'Satın Al'}
+            </button>
+            ${ownedCount > 0 && inSlotCount < ownedCount ? 
+              `<button class="buy-btn" onclick="equipItem('${item.id}')">Kuşan</button>` : 
+              (inSlotCount > 0 ? `<span style="color:#22c55e;font-size:12px;">Slotta: ${inSlotCount}</span>` : '')
             }
           </div>
         </div>
@@ -2973,27 +2999,47 @@
     }).join('');
   }
 
+  function getItemCountInSlots(itemId) {
+    let count = 0;
+    G.itemSlots.forEach(slot => {
+      if (slot && slot.id === itemId) count += slot.count;
+    });
+    return count;
+  }
+
   // Make functions global for onclick
   window.buyItem = function(itemId) {
     const item = SPECIAL_ITEMS.find(i => i.id === itemId);
     if (!item) return;
     if (G.coins < item.price) return;
-    if (G.ownedItems.includes(itemId)) return;
     
     G.coins -= item.price;
-    G.ownedItems.push(itemId);
+    G.itemInventory[itemId] = (G.itemInventory[itemId] || 0) + 1;
     updateShopUI();
     updateItemSlotsUI();
   };
 
   window.equipItem = function(itemId) {
-    // Find empty slot
-    const emptySlot = G.itemSlots.findIndex(s => s === null);
-    if (emptySlot === -1) {
-      // All slots full, replace first slot
-      G.itemSlots[0] = itemId;
+    const inventoryCount = G.itemInventory[itemId] || 0;
+    const inSlotCount = getItemCountInSlots(itemId);
+    
+    // Check if we have more in inventory than in slots
+    if (inSlotCount >= inventoryCount) return;
+    
+    // Find if this item already has a slot
+    const existingSlot = G.itemSlots.findIndex(s => s && s.id === itemId);
+    if (existingSlot !== -1) {
+      // Add to existing slot
+      G.itemSlots[existingSlot].count++;
     } else {
-      G.itemSlots[emptySlot] = itemId;
+      // Find empty slot
+      const emptySlot = G.itemSlots.findIndex(s => s === null);
+      if (emptySlot === -1) {
+        // All slots full, replace first slot
+        G.itemSlots[0] = { id: itemId, count: 1 };
+      } else {
+        G.itemSlots[emptySlot] = { id: itemId, count: 1 };
+      }
     }
     updateShopUI();
     updateItemSlotsUI();
@@ -3003,9 +3049,15 @@
     coinPill.textContent = `🪙 ${G.coins}`;
     
     itemSlots.forEach((slot, i) => {
-      const itemId = G.itemSlots[i];
+      const slotData = G.itemSlots[i];
+      const itemId = slotData ? slotData.id : null;
+      const itemCount = slotData ? slotData.count : 0;
       const item = SPECIAL_ITEMS.find(it => it.id === itemId);
       const cooldown = G.itemCooldowns[i];
+      
+      // Remove old count badge
+      const oldBadge = slot.querySelector('.slot-count');
+      if (oldBadge) oldBadge.remove();
       
       if (!item) {
         slot.classList.add('empty');
@@ -3017,6 +3069,14 @@
       } else {
         slot.classList.remove('empty');
         slot.querySelector('.slot-icon').textContent = item.icon;
+        
+        // Add count badge if more than 1
+        if (itemCount > 1) {
+          const badge = document.createElement('div');
+          badge.className = 'slot-count';
+          badge.textContent = itemCount;
+          slot.appendChild(badge);
+        }
         
         // Check if this item is currently active
         if (G.activeItem === itemId) {
@@ -3045,9 +3105,10 @@
   function useItem(slotIndex) {
     if (!G.running || G.gameOver) return;
     
-    const itemId = G.itemSlots[slotIndex];
-    if (!itemId) return;
+    const slotData = G.itemSlots[slotIndex];
+    if (!slotData) return;
     
+    const itemId = slotData.id;
     const item = SPECIAL_ITEMS.find(i => i.id === itemId);
     if (!item) return;
     
@@ -3061,59 +3122,69 @@
     applyItemEffect(item, slotIndex);
   }
 
+  function consumeItemFromSlot(slotIndex) {
+    const slotData = G.itemSlots[slotIndex];
+    if (!slotData) return;
+    
+    const itemId = slotData.id;
+    
+    // Decrease count in slot
+    slotData.count--;
+    
+    // If slot is empty, remove it
+    if (slotData.count <= 0) {
+      G.itemSlots[slotIndex] = null;
+    }
+    
+    // Decrease inventory count
+    if (G.itemInventory[itemId]) {
+      G.itemInventory[itemId]--;
+      if (G.itemInventory[itemId] <= 0) {
+        delete G.itemInventory[itemId];
+      }
+    }
+  }
+
   function applyItemEffect(item, slotIndex) {
     switch (item.effect) {
       case 'invincible':
         // Lightning Armor - 10 seconds invincibility
         G.activeItem = item.id;
         G.activeItemTimer = item.duration;
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'rapidFire':
         // Ishigakure Necklace - reduced X cooldown
         G.activeItem = item.id;
         G.activeItemTimer = item.duration;
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'extraLife':
         // Ancient Elixir - +1 life (instant, permanent)
         G.lives += 1;
         G.maxLives = Math.max(G.maxLives, G.lives);
-        // Remove from slot after use
-        G.itemSlots[slotIndex] = null;
-        // Remove from owned items
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'rasengan':
         // Rasengan - clear all enemies, half boss HP damage
         fireRasengan();
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'slowEnemies':
         // Viagra - slow enemies
         G.activeItem = item.id;
         G.activeItemTimer = item.duration;
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'summonPuppet':
         // Puppeteer's Parchment - summon a random character as shield
         summonPuppet();
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
         
       case 'metalRain':
@@ -3122,9 +3193,7 @@
         G.activeItemTimer = item.duration;
         G.metalRainTimer = 0;
         G.ioriKatanaActive = true;
-        // Remove from slot and owned after use
-        G.itemSlots[slotIndex] = null;
-        G.ownedItems = G.ownedItems.filter(id => id !== item.id);
+        consumeItemFromSlot(slotIndex);
         break;
     }
     
