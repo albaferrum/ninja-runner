@@ -1395,6 +1395,9 @@
     .leaderboard-row:hover {
       background: rgba(255,255,255,0.1);
     }
+    .leaderboard-row {
+      cursor: pointer;
+    }
     .leaderboard-row.current-player {
       background: rgba(255,100,100,0.2);
       border: 2px solid rgba(255,100,100,0.5);
@@ -1563,6 +1566,40 @@
       <div class="profile-row">
         <span class="profile-label">🎪 Dojo İtemleri</span>
         <span class="profile-value" id="profileDojoItems">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== USER PROFILE MODAL (for viewing other users) ===== -->
+  <div class="profile-modal" id="userProfileModal">
+    <div class="profile-content">
+      <div class="profile-header">
+        <div class="profile-title" id="userProfileTitle">👤 Oyuncu Profili</div>
+        <button class="profile-close" id="userProfileClose">×</button>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">👤 İsim</span>
+        <span class="profile-value" id="userProfileName">-</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">🏆 Max Puan</span>
+        <span class="profile-value score" id="userProfileMaxScore">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">⚔️ Arena Kazanılan</span>
+        <span class="profile-value wins" id="userProfileArenaWins">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">💥 Arena Kaybedilen</span>
+        <span class="profile-value losses" id="userProfileArenaLosses">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">👹 Yok Edilen Bosslar</span>
+        <span class="profile-value" id="userProfileBossKills">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">🎪 Dojo İtemleri</span>
+        <span class="profile-value" id="userProfileDojoItems">0</span>
       </div>
     </div>
   </div>
@@ -4187,6 +4224,69 @@
     }
   });
 
+  // ===== USER PROFILE MODAL (for viewing other users) =====
+  const userProfileModal = document.getElementById('userProfileModal');
+  const userProfileClose = document.getElementById('userProfileClose');
+  
+  async function viewUserProfile(uid, displayName) {
+    if (!uid) {
+      // If no uid, just show the name
+      document.getElementById('userProfileTitle').textContent = `👤 ${displayName}`;
+      document.getElementById('userProfileName').textContent = displayName;
+      document.getElementById('userProfileMaxScore').textContent = '-';
+      document.getElementById('userProfileArenaWins').textContent = '-';
+      document.getElementById('userProfileArenaLosses').textContent = '-';
+      document.getElementById('userProfileBossKills').textContent = '-';
+      document.getElementById('userProfileDojoItems').textContent = '-';
+      userProfileModal.classList.add('active');
+      return;
+    }
+    
+    try {
+      // Load user data from Firebase
+      const snapshot = await database.ref(`users/${uid}`).once('value');
+      const userData = snapshot.val() || {};
+      
+      // Update user profile modal with data
+      document.getElementById('userProfileTitle').textContent = `👤 ${userData.username || displayName}`;
+      document.getElementById('userProfileName').textContent = userData.username || displayName;
+      document.getElementById('userProfileMaxScore').textContent = (userData.highScore || 0).toLocaleString();
+      document.getElementById('userProfileArenaWins').textContent = userData.arenaWins || 0;
+      document.getElementById('userProfileArenaLosses').textContent = userData.arenaLosses || 0;
+      document.getElementById('userProfileBossKills').textContent = userData.bossKills || 0;
+      document.getElementById('userProfileDojoItems').textContent = userData.dojoItems || 0;
+      
+      // Show modal
+      userProfileModal.classList.add('active');
+    } catch (err) {
+      console.error('Error loading user profile:', err);
+      // Show basic info on error
+      document.getElementById('userProfileTitle').textContent = `👤 ${displayName}`;
+      document.getElementById('userProfileName').textContent = displayName;
+      document.getElementById('userProfileMaxScore').textContent = '-';
+      document.getElementById('userProfileArenaWins').textContent = '-';
+      document.getElementById('userProfileArenaLosses').textContent = '-';
+      document.getElementById('userProfileBossKills').textContent = '-';
+      document.getElementById('userProfileDojoItems').textContent = '-';
+      userProfileModal.classList.add('active');
+    }
+  }
+  
+  // Make viewUserProfile available globally for onclick handlers
+  window.viewUserProfile = viewUserProfile;
+  
+  // User profile close
+  userProfileClose.addEventListener('click', () => {
+    userProfileModal.classList.remove('active');
+  });
+  
+  // Close user profile when clicking outside
+  userProfileModal.addEventListener('click', (e) => {
+    if (e.target === userProfileModal) {
+      userProfileModal.classList.remove('active');
+    }
+  });
+
   // ===== ARENA FUNCTIONS =====
   
   // Generate random room code
@@ -6401,6 +6501,7 @@
       if (isNewHighScore) {
         // Save new high score
         await scoreRef.set({
+          uid: currentUser.uid,
           nickname: currentUser.username,
           score: finalScore,
           character: selectedChar,
@@ -6438,8 +6539,9 @@
       const data = snapshot.val();
       if (!data) return [];
       
-      // Convert to array and sort descending
-      const scores = Object.values(data)
+      // Convert to array with uid from key and sort descending
+      const scores = Object.entries(data)
+        .map(([uid, scoreData]) => ({ ...scoreData, uid }))
         .sort((a, b) => b.score - a.score);
       
       return scores;
@@ -6489,9 +6591,10 @@
       const isCurrentPlayer = s.nickname.toLowerCase() === nickname.toLowerCase();
       const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
       const charName = CHARACTERS[s.character]?.name || s.character;
+      const uid = s.uid || '';
       
       return `
-        <div class="leaderboard-row ${rankClass} ${isCurrentPlayer ? 'current-player' : ''}">
+        <div class="leaderboard-row ${rankClass} ${isCurrentPlayer ? 'current-player' : ''}" onclick="viewUserProfile('${uid}', '${escapeHtml(s.nickname)}')">
           <span class="rank ${rankClass}">${rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank}</span>
           <span class="player-name">${escapeHtml(s.nickname)}</span>
           <span class="player-char">${charName}</span>
@@ -6544,9 +6647,10 @@
       const isCurrentPlayer = s.nickname.toLowerCase() === nickname.toLowerCase();
       const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
       const charName = CHARACTERS[s.character]?.name || s.character;
+      const uid = s.uid || '';
       
       return `
-        <div class="leaderboard-row ${rankClass} ${isCurrentPlayer ? 'current-player' : ''}">
+        <div class="leaderboard-row ${rankClass} ${isCurrentPlayer ? 'current-player' : ''}" onclick="viewUserProfile('${uid}', '${escapeHtml(s.nickname)}')">
           <span class="rank ${rankClass}">${rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank}</span>
           <span class="player-name">${escapeHtml(s.nickname)}</span>
           <span class="player-char">${charName}</span>
