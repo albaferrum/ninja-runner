@@ -1240,24 +1240,21 @@
         font-size: 16px;
       }
       .location-select-banner {
-        display: none;
+        width: min(200px, 50%);
       }
     }
     .location-select-banner {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 280px;
+      width: min(300px, 60%);
       height: auto;
       filter: drop-shadow(0 0 20px rgba(100,150,255,0.3));
       border-radius: 12px;
-      z-index: 50;
-      pointer-events: none;
+      margin-bottom: 15px;
     }
-    @media (max-width: 900px) {
-      .location-select-banner {
-        width: 180px;
-        bottom: 10px;
+    .location-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
         right: 10px;
       }
     }
@@ -1878,6 +1875,7 @@
 
   <!-- ===== LOCATION SELECT SCREEN ===== -->
   <div class="screen" id="locationSelectScreen">
+    <img src="img/ninja-banner.png" alt="Ninja Banner" class="location-select-banner" />
     <div class="screen-title">🏔️ Mekan Seç</div>
     <div class="screen-subtitle">Maceranın geçeceği yeri seç!</div>
     
@@ -1904,9 +1902,10 @@
       </div>
     </div>
 
-    <button class="btn" id="locationStartBtn">Oyuna Başla! ⚔️</button>
-    
-    <img src="img/ninja-banner.png" alt="Ninja Banner" class="location-select-banner" />
+    <div class="location-buttons">
+      <button class="btn-secondary" id="locationBackBtn">⬅ Geri Dön</button>
+      <button class="btn" id="locationStartBtn">Oyuna Başla! ⚔️</button>
+    </div>
   </div>
 
   <!-- ===== LEADERBOARD SCREEN ===== -->
@@ -2602,6 +2601,7 @@
   const charCards = document.querySelectorAll('.char-card');
   const locationCards = document.querySelectorAll('.location-card');
   const locationStartBtn = document.getElementById('locationStartBtn');
+  const locationBackBtn = document.getElementById('locationBackBtn');
 
   // Dojo elements
   const charSelectCoins = document.getElementById('charSelectCoins');
@@ -6226,6 +6226,10 @@
   locationStartBtn.addEventListener('click', () => {
     showScreen('game');
     initGame();
+  });
+
+  locationBackBtn.addEventListener('click', () => {
+    showScreen('charSelect');
   });
 
   // ===== LEADERBOARD =====
