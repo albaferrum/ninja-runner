@@ -2820,6 +2820,7 @@
 
     // Coin & Item system
     coins: 0,
+    lastCoinScore: 0, // Track score for coin rewards (1 coin per 10 points)
     itemInventory: {}, // { itemId: count } - multi-buy support
     itemSlots: [null, null, null], // 3 item slots - now stores { id, count }
     activeItem: null, // Currently active item effect
@@ -6600,6 +6601,7 @@
     G.running = true;
     G.gameOver = false;
     G.score = 0;
+    G.lastCoinScore = 0;
     G.speed = 280;
     G.spawnTimer = rand(G.spawnMin, G.spawnMax);
     G.obstacles = [];
@@ -11064,6 +11066,13 @@
     
     G.speed = Math.min(G.speedMax, G.speed + G.speedAccel * dt);
     G.score += dt * (G.speed / 100) * G.scoreMultiplier;
+    
+    // Award 1 coin per 10 score points
+    const scoreCoins = Math.floor(G.score / 10) - Math.floor(G.lastCoinScore / 10);
+    if (scoreCoins > 0) {
+      G.coins += scoreCoins;
+      G.lastCoinScore = G.score;
+    }
     
     G.groundScroll += effectiveSpeed * dt;
 
