@@ -4229,6 +4229,8 @@
   const userProfileClose = document.getElementById('userProfileClose');
   
   async function viewUserProfile(uid, displayName) {
+    console.log('viewUserProfile called with uid:', uid, 'displayName:', displayName);
+    
     if (!uid) {
       // If no uid, just show the name
       document.getElementById('userProfileTitle').textContent = `👤 ${displayName}`;
@@ -4244,13 +4246,22 @@
     
     try {
       // Load user data from Firebase
-      const snapshot = await database.ref(`users/${uid}`).once('value');
-      const userData = snapshot.val() || {};
+      const userSnapshot = await database.ref(`users/${uid}`).once('value');
+      const userData = userSnapshot.val() || {};
+      console.log('User data from Firebase:', userData);
+      
+      // Also get score from scores collection
+      const scoreSnapshot = await database.ref(`scores/${uid}`).once('value');
+      const scoreData = scoreSnapshot.val() || {};
+      console.log('Score data from Firebase:', scoreData);
+      
+      // Combine data - prefer scores collection for highScore
+      const highScore = scoreData.score || userData.highScore || 0;
       
       // Update user profile modal with data
-      document.getElementById('userProfileTitle').textContent = `👤 ${userData.username || displayName}`;
-      document.getElementById('userProfileName').textContent = userData.username || displayName;
-      document.getElementById('userProfileMaxScore').textContent = (userData.highScore || 0).toLocaleString();
+      document.getElementById('userProfileTitle').textContent = `👤 ${userData.username || scoreData.nickname || displayName}`;
+      document.getElementById('userProfileName').textContent = userData.username || scoreData.nickname || displayName;
+      document.getElementById('userProfileMaxScore').textContent = highScore.toLocaleString();
       document.getElementById('userProfileArenaWins').textContent = userData.arenaWins || 0;
       document.getElementById('userProfileArenaLosses').textContent = userData.arenaLosses || 0;
       document.getElementById('userProfileBossKills').textContent = userData.bossKills || 0;
