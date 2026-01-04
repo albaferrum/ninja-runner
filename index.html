@@ -2831,7 +2831,8 @@
     riaru1Defeated: false,
     maxdownDefeated: false,
     fortiusDefeated: false,
-    currentBossType: null, // 'riaru', 'maxdown', or 'fortius'
+    zasetsuDefeated: false,
+    currentBossType: null, // 'riaru', 'maxdown', 'fortius', or 'zasetsu'
     boss: null,
     bossProjectiles: [],
     bossAttackTimer: 0,
@@ -2841,6 +2842,10 @@
     laserActive: false,
     laserTimer: 0,
     laserY: 0,
+    
+    // Stun state (Zasetsu)
+    playerStunned: false,
+    stunTimer: 0,
 
     // Parchment/Scroll system
     scrolls: [],
@@ -3797,6 +3802,17 @@
     attackCooldown: 1.5,
     plasmaOrbCooldown: 3,
     plasmaOrbDamage: 1
+  };
+
+  const BOSS_ZASETSU = {
+    name: 'ZASETSU',
+    maxHp: 4000,
+    width: 180,
+    height: 240,
+    x: 350,
+    attackCooldown: 2.5,
+    darkAuraCooldown: 4,
+    stunDuration: 1.5
   };
 
   // ===== PLAYER =====
@@ -6752,6 +6768,7 @@
     G.riaru1Defeated = false;
     G.maxdownDefeated = false;
     G.fortiusDefeated = false;
+    G.zasetsuDefeated = false;
     G.currentBossType = null;
     G.boss = null;
     G.bossProjectiles = [];
@@ -6761,6 +6778,8 @@
     G.lightningStrikes = [];
     G.laserActive = false;
     G.laserTimer = 0;
+    G.playerStunned = false;
+    G.stunTimer = 0;
 
     // Scroll/parchment reset
     G.scrolls = [];
@@ -6927,6 +6946,26 @@
       G.bossUltiTimer = BOSS_FORTIUS.plasmaOrbCooldown;
       G.plasmaOrbActive = false;
       G.plasmaOrb = null;
+    } else if (bossType === 'zasetsu') {
+      G.boss = {
+        hp: BOSS_ZASETSU.maxHp,
+        maxHp: BOSS_ZASETSU.maxHp,
+        x: WORLD_W + 150,
+        targetX: BOSS_ZASETSU.x,
+        y: G.groundY,
+        w: BOSS_ZASETSU.width,
+        h: BOSS_ZASETSU.height,
+        phase: 0,
+        attacking: false,
+        attackAnim: 0,
+        tentaclePhase: 0,
+        breathePhase: 0,
+        eyeGlow: 0
+      };
+      G.bossAttackTimer = 3;
+      G.bossUltiTimer = BOSS_ZASETSU.darkAuraCooldown;
+      G.darkAuraActive = false;
+      G.darkAura = null;
     }
     
     G.bossProjectiles = [];
@@ -7147,6 +7186,112 @@
       }
     }
     
+    // ZASETSU dark aura attack
+    if (G.currentBossType === 'zasetsu' && boss.x <= boss.targetX) {
+      G.bossUltiTimer -= dt;
+      
+      // Animation phases
+      boss.tentaclePhase = (boss.tentaclePhase || 0) + dt * 3;
+      boss.breathePhase = (boss.breathePhase || 0) + dt * 1.5;
+      boss.eyeGlow = (boss.eyeGlow || 0) + dt * 4;
+      
+      // Charging warning
+      G.darkAuraCharging = G.bossUltiTimer <= 2 && G.bossUltiTimer > 0 && !G.darkAuraActive;
+      
+      if (G.bossUltiTimer <= 0 && !G.darkAuraActive) {
+        // Launch dark aura wave
+        G.darkAuraActive = true;
+        G.darkAuraCharging = false;
+        G.darkAura = {
+          x: boss.x - 50,
+          y: G.groundY - boss.h * 0.4,
+          width: 80,
+          height: 100,
+          vx: -320,
+          phase: 0,
+          life: 5
+        };
+        boss.attacking = true;
+        boss.attackAnim = 1.2;
+      }
+      
+      // Update dark aura
+      if (G.darkAuraActive && G.darkAura) {
+        const aura = G.darkAura;
+        aura.phase += dt * 6;
+        aura.life -= dt;
+        aura.x += aura.vx * dt;
+        
+        // Sinister trailing particles
+        if (Math.random() < 0.4) {
+          G.particles.push({
+            x: aura.x + rand(-30, 30),
+            y: aura.y + rand(-40, 40),
+            vx: rand(-50, 50),
+            vy: rand(-80, 20),
+            life: rand(0.3, 0.6),
+            color: ['#1a1a2e', '#16213e', '#0f3460', '#533483'][Math.floor(rand(0, 4))]
+          });
+        }
+        
+        // Collision with player
+        const pr = playerRect();
+        const auraRect = { x: aura.x - aura.width/2, y: aura.y - aura.height/2, w: aura.width, h: aura.height };
+        const isInvincible = G.activeItem === 'lightning_armor';
+        const isFlying = G.ultActive && (G.ultType === 'eagleFlight' || G.ultType === 'moonlight' || G.ultType === 'iceStorm');
+        
+        if (!isInvincible && !isFlying && rectsOverlap(pr, auraRect)) {
+          G.lives--;
+          
+          // STUN the player!
+          G.playerStunned = true;
+          G.stunTimer = BOSS_ZASETSU.stunDuration;
+          
+          // Dark explosion particles
+          for (let k = 0; k < 25; k++) {
+            G.particles.push({
+              x: aura.x,
+              y: aura.y,
+              vx: rand(-150, 150),
+              vy: rand(-150, 150),
+              life: rand(0.4, 0.8),
+              color: ['#1a1a2e', '#533483', '#4a0080'][Math.floor(rand(0, 3))]
+            });
+          }
+          
+          G.darkAuraActive = false;
+          G.darkAura = null;
+          G.bossUltiTimer = BOSS_ZASETSU.darkAuraCooldown;
+          
+          if (G.lives <= 0) {
+            G.gameOver = true;
+            G.running = false;
+            G.bossActive = false;
+            G.boss = null;
+            canvas.classList.remove('ult-active');
+            setTimeout(() => showLeaderboard(G.score), 500);
+            return;
+          }
+        }
+        
+        // Remove if off screen or expired
+        if (aura.x < -100 || aura.life <= 0) {
+          G.darkAuraActive = false;
+          G.darkAura = null;
+          G.bossUltiTimer = BOSS_ZASETSU.darkAuraCooldown;
+        }
+      }
+    }
+    
+    // Update stun timer
+    if (G.playerStunned) {
+      G.stunTimer -= dt;
+      if (G.stunTimer <= 0) {
+        G.playerStunned = false;
+        G.stunTimer = 0;
+      }
+    }
+    
     // Update boss projectiles
     for (let i = G.bossProjectiles.length - 1; i >= 0; i--) {
       const p = G.bossProjectiles[i];
@@ -7311,6 +7456,38 @@
     if (G.currentBossType === 'maxdown') {
       // MAXDOWN sadece lazer kullanır - plasma saldırısı yok
       return;
+    } else if (G.currentBossType === 'zasetsu') {
+      // Zasetsu - tentacle dark bolts
+      boss.attacking = true;
+      boss.attackAnim = 0.8;
+      
+      // Fire dark tentacle bolts from multiple positions
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+          if (!G.boss || G.currentBossType !== 'zasetsu') return;
+          G.bossProjectiles.push({
+            x: boss.x - 30,
+            y: boss.y - boss.h * 0.3 + (i - 1.5) * 35,
+            vx: -250 - rand(0, 60),
+            vy: (i - 1.5) * 30,
+            life: 5,
+            type: 'darkbolt',
+            size: 15 + rand(0, 8)
+          });
+        }, i * 120);
+      }
+      
+      // Dark particles
+      for (let i = 0; i < 12; i++) {
+        G.particles.push({
+          x: boss.x + rand(-40, 20),
+          y: boss.y - boss.h * 0.4 + rand(-50, 50),
+          vx: rand(-120, -40),
+          vy: rand(-60, 60),
+          life: rand(0.4, 0.7),
+          color: ['#1a1a2e', '#16213e', '#533483'][Math.floor(rand(0, 3))]
+        });
+      }
     } else if (G.currentBossType === 'fortius') {
       // Fortius - psychic energy bolts (küçük saldırılar, büyük orb ayrı)
       boss.attacking = true;
@@ -7379,7 +7556,11 @@
     const bossType = G.currentBossType;
     let bonus, coinReward, particleColors;
     
-    if (bossType === 'fortius') {
+    if (bossType === 'zasetsu') {
+      bonus = 2000;
+      coinReward = 400;
+      particleColors = ['#1a1a2e', '#533483', '#4a0080', '#6b21a8'];
+    } else if (bossType === 'fortius') {
       bonus = 1000;
       coinReward = 200;
       particleColors = ['#a855f7', '#c084fc', '#d946ef', '#f0abfc'];
@@ -7402,6 +7583,12 @@
       G.fortiusDefeated = true;
       G.plasmaOrbActive = false;
       G.plasmaOrb = null;
+    } else if (bossType === 'zasetsu') {
+      G.zasetsuDefeated = true;
+      G.darkAuraActive = false;
+      G.darkAura = null;
+      G.playerStunned = false;
+      G.stunTimer = 0;
     }
     G.currentBossType = null;
     G.boss = null;
@@ -7779,6 +7966,7 @@
   function useSkillX() {
     if (!G.running || G.gameOver) return;
     if (G.skillXCooldown > 0) return;
+    if (G.playerStunned) return; // Can't use skills while stunned
 
     const char = CHARACTERS[selectedChar];
     const pr = playerRect();
@@ -8002,6 +8190,7 @@
     if (!G.running || G.gameOver) return;
     if (G.skillFCooldown > 0) return;
     if (G.ultActive) return;
+    if (G.playerStunned) return; // Can't use skills while stunned
 
     const char = CHARACTERS[selectedChar];
     G.ultActive = true;
@@ -8093,6 +8282,9 @@
   function jump() {
     if (G.gameOver) { resetGame(); return; }
     if (!G.running) return;
+    
+    // Can't jump while stunned!
+    if (G.playerStunned) return;
 
     // Eagle flight: control height with jump
     if (G.ultActive && G.ultType === 'eagleFlight') {
@@ -11631,7 +11823,7 @@
       }
     }
 
-    // Boss spawn at 500 points (Riaru), 1500 points (MAXDOWN), 5000 points (Fortius)
+    // Boss spawn at 500 points (Riaru), 1500 points (MAXDOWN), 5000 points (Fortius), 10000 points (Zasetsu)
     if (!G.bossActive && G.score >= 500) {
       if (!G.riaru1Defeated && G.score >= 500) {
         spawnBoss('riaru');
@@ -11639,6 +11831,8 @@
         spawnBoss('maxdown');
       } else if (G.riaru1Defeated && G.maxdownDefeated && !G.fortiusDefeated && G.score >= 5000) {
         spawnBoss('fortius');
+      } else if (G.riaru1Defeated && G.maxdownDefeated && G.fortiusDefeated && !G.zasetsuDefeated && G.score >= 10000) {
+        spawnBoss('zasetsu');
       }
     }
 
@@ -12227,6 +12421,11 @@
         drawFortius();
         drawPlasmaCharging();
         drawPlasmaOrb();
+      } else if (G.currentBossType === 'zasetsu') {
+        drawZasetsu();
+        drawDarkAuraWarning();
+        drawDarkAura();
+        drawStunEffect();
       } else {
         drawBoss();
       }
@@ -12268,6 +12467,10 @@
     }
     if (G.currentBossType === 'fortius') {
       drawFortius();
+      return;
+    }
+    if (G.currentBossType === 'zasetsu') {
+      drawZasetsu();
       return;
     }
     
@@ -12966,6 +13169,352 @@
     ctx.restore();
   }
 
+  // ===== ZASETSU BOSS - Cthulhu-like cosmic horror =====
+  function drawZasetsu() {
+    if (!G.boss || G.currentBossType !== 'zasetsu') return;
+    
+    const boss = G.boss;
+    const x = boss.x;
+    const y = boss.y;
+    const w = boss.w;
+    const h = boss.h;
+    const tentaclePhase = boss.tentaclePhase || 0;
+    const breathePhase = boss.breathePhase || 0;
+    const eyeGlow = boss.eyeGlow || 0;
+    
+    ctx.save();
+    
+    // Breathing effect
+    const breatheScale = 1 + Math.sin(breathePhase) * 0.03;
+    
+    // Dark cosmic aura
+    const auraSize = 140 + Math.sin(eyeGlow * 0.5) * 20;
+    const auraGradient = ctx.createRadialGradient(
+      x + w/2, y - h/2, 30,
+      x + w/2, y - h/2, auraSize
+    );
+    auraGradient.addColorStop(0, 'rgba(26, 26, 46, 0.5)');
+    auraGradient.addColorStop(0.5, 'rgba(83, 52, 131, 0.3)');
+    auraGradient.addColorStop(1, 'rgba(15, 52, 96, 0)');
+    ctx.fillStyle = auraGradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y - h/2, auraSize, auraSize * 1.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Giant shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y + 8, w/2 + 30, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Massive body (bulbous, eldritch)
+    const bodyGradient = ctx.createRadialGradient(
+      x + w/2 - 20, y - h * 0.4, 20,
+      x + w/2, y - h * 0.4, 100 * breatheScale
+    );
+    bodyGradient.addColorStop(0, '#2d3a4a');
+    bodyGradient.addColorStop(0.5, '#1a2636');
+    bodyGradient.addColorStop(1, '#0d1520');
+    ctx.fillStyle = bodyGradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y - h * 0.35, 80 * breatheScale, 100 * breatheScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Legs (thick, twisted)
+    ctx.fillStyle = '#1a2636';
+    for (let i = 0; i < 4; i++) {
+      const legX = x + 30 + i * 35;
+      const legWave = Math.sin(tentaclePhase + i * 0.8) * 5;
+      ctx.beginPath();
+      ctx.moveTo(legX, y - 30);
+      ctx.quadraticCurveTo(legX + legWave, y - 15, legX + legWave * 0.5, y);
+      ctx.lineTo(legX + 20 + legWave * 0.5, y);
+      ctx.quadraticCurveTo(legX + 20 + legWave, y - 15, legX + 20, y - 30);
+      ctx.fill();
+    }
+    
+    // Massive head (Cthulhu-like)
+    const headY = y - h * 0.7;
+    const headGradient = ctx.createRadialGradient(
+      x + w/2 - 15, headY - 20, 10,
+      x + w/2, headY, 70
+    );
+    headGradient.addColorStop(0, '#3d4f5f');
+    headGradient.addColorStop(0.6, '#1a2636');
+    headGradient.addColorStop(1, '#0d1520');
+    ctx.fillStyle = headGradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, headY, 65 * breatheScale, 55 * breatheScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Face tentacles (Cthulhu signature!)
+    ctx.strokeStyle = '#2d3a4a';
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const tentacleStartX = x + w/2 - 40 + i * 11;
+      const tentacleStartY = headY + 30;
+      const wave1 = Math.sin(tentaclePhase + i * 0.7) * 12;
+      const wave2 = Math.cos(tentaclePhase * 0.8 + i * 0.5) * 8;
+      const tentacleLength = 50 + i * 5 + Math.sin(i * 2) * 15;
+      
+      ctx.lineWidth = 8 - i * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(tentacleStartX, tentacleStartY);
+      ctx.quadraticCurveTo(
+        tentacleStartX + wave1, 
+        tentacleStartY + tentacleLength * 0.5,
+        tentacleStartX + wave2, 
+        tentacleStartY + tentacleLength
+      );
+      ctx.stroke();
+      
+      // Tentacle tips
+      ctx.fillStyle = '#3d4f5f';
+      ctx.beginPath();
+      ctx.arc(tentacleStartX + wave2, tentacleStartY + tentacleLength, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Glowing eyes (multiple, alien)
+    const eyePositions = [
+      { x: x + w/2 - 30, y: headY - 15, size: 12 },
+      { x: x + w/2 + 30, y: headY - 15, size: 12 },
+      { x: x + w/2, y: headY - 25, size: 8 },
+      { x: x + w/2 - 15, y: headY - 5, size: 6 },
+      { x: x + w/2 + 15, y: headY - 5, size: 6 }
+    ];
+    
+    for (const eye of eyePositions) {
+      // Eye glow
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 25 + Math.sin(eyeGlow + eye.x * 0.1) * 10;
+      
+      // Outer eye
+      ctx.fillStyle = '#1a0011';
+      ctx.beginPath();
+      ctx.ellipse(eye.x, eye.y, eye.size, eye.size * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner glow
+      const innerGlow = ctx.createRadialGradient(eye.x, eye.y, 0, eye.x, eye.y, eye.size);
+      innerGlow.addColorStop(0, '#ff3366');
+      innerGlow.addColorStop(0.5, '#cc0044');
+      innerGlow.addColorStop(1, '#660022');
+      ctx.fillStyle = innerGlow;
+      ctx.beginPath();
+      ctx.ellipse(eye.x, eye.y, eye.size * 0.8, eye.size * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Pupil
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(eye.x, eye.y, eye.size * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Side wing-like appendages
+    ctx.fillStyle = '#1a2636';
+    ctx.strokeStyle = '#2d3a4a';
+    ctx.lineWidth = 3;
+    
+    // Left wing
+    const wingWave = Math.sin(tentaclePhase * 0.5) * 10;
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y - h * 0.5);
+    ctx.quadraticCurveTo(x - 60 + wingWave, y - h * 0.7, x - 40, y - h * 0.9);
+    ctx.quadraticCurveTo(x - 30, y - h * 0.6, x - 20, y - h * 0.5);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Right wing
+    ctx.beginPath();
+    ctx.moveTo(x + w + 20, y - h * 0.5);
+    ctx.quadraticCurveTo(x + w + 60 - wingWave, y - h * 0.7, x + w + 40, y - h * 0.9);
+    ctx.quadraticCurveTo(x + w + 30, y - h * 0.6, x + w + 20, y - h * 0.5);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Floating dark particles
+    ctx.shadowBlur = 5;
+    for (let i = 0; i < 6; i++) {
+      const angle = eyeGlow * 0.3 + (i * Math.PI * 2 / 6);
+      const dist = 90 + Math.sin(eyeGlow + i) * 15;
+      const px = x + w/2 + Math.cos(angle) * dist;
+      const py = y - h/2 + Math.sin(angle) * dist * 0.8;
+      ctx.fillStyle = `rgba(83, 52, 131, ${0.4 + Math.sin(eyeGlow + i) * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(px, py, 5 + Math.sin(eyeGlow * 2 + i) * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Name tag
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ff0044';
+    ctx.fillStyle = '#ff0044';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ZASETSU', x + w/2, headY - 70);
+    
+    ctx.restore();
+  }
+
+  function drawDarkAuraWarning() {
+    if (!G.darkAuraCharging || !G.boss || G.currentBossType !== 'zasetsu') return;
+    
+    const boss = G.boss;
+    ctx.save();
+    
+    const flash = Math.sin(Date.now() / 70) > 0;
+    
+    if (flash) {
+      // Warning text
+      ctx.fillStyle = '#ff0044';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 30;
+      ctx.fillText('💀 KARANLIK AURA! 💀', WORLD_W / 2, 100);
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText('STUN ETKİSİ VAR - KAÇIN!', WORLD_W / 2, 130);
+    }
+    
+    // Charging effect
+    const chargeSize = 40 + Math.sin(Date.now() / 40) * 15;
+    const gradient = ctx.createRadialGradient(
+      boss.x - 30, boss.y - boss.h * 0.4, 10,
+      boss.x - 30, boss.y - boss.h * 0.4, chargeSize
+    );
+    gradient.addColorStop(0, 'rgba(83, 52, 131, 0.9)');
+    gradient.addColorStop(0.5, 'rgba(26, 26, 46, 0.6)');
+    gradient.addColorStop(1, 'rgba(15, 52, 96, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(boss.x - 30, boss.y - boss.h * 0.4, chargeSize, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  }
+
+  function drawDarkAura() {
+    if (!G.darkAuraActive || !G.darkAura) return;
+    
+    const aura = G.darkAura;
+    ctx.save();
+    
+    // Outer darkness
+    const outerGradient = ctx.createRadialGradient(
+      aura.x, aura.y, 10,
+      aura.x, aura.y, aura.width
+    );
+    outerGradient.addColorStop(0, 'rgba(26, 26, 46, 0.9)');
+    outerGradient.addColorStop(0.5, 'rgba(83, 52, 131, 0.6)');
+    outerGradient.addColorStop(1, 'rgba(15, 52, 96, 0)');
+    ctx.fillStyle = outerGradient;
+    ctx.beginPath();
+    ctx.ellipse(aura.x, aura.y, aura.width, aura.height, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner swirling darkness
+    ctx.shadowColor = '#533483';
+    ctx.shadowBlur = 30;
+    const innerGradient = ctx.createRadialGradient(
+      aura.x, aura.y, 5,
+      aura.x, aura.y, aura.width * 0.6
+    );
+    innerGradient.addColorStop(0, '#1a1a2e');
+    innerGradient.addColorStop(0.5, '#16213e');
+    innerGradient.addColorStop(1, 'rgba(83, 52, 131, 0.5)');
+    ctx.fillStyle = innerGradient;
+    ctx.beginPath();
+    ctx.ellipse(aura.x, aura.y, aura.width * 0.6, aura.height * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Swirling tendrils
+    ctx.strokeStyle = '#533483';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 5; i++) {
+      const angle = aura.phase + (i * Math.PI * 2 / 5);
+      const startR = 15;
+      const endR = aura.width * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(
+        aura.x + Math.cos(angle) * startR,
+        aura.y + Math.sin(angle) * startR
+      );
+      ctx.quadraticCurveTo(
+        aura.x + Math.cos(angle + 0.5) * (startR + endR) / 2,
+        aura.y + Math.sin(angle + 0.5) * (startR + endR) / 2,
+        aura.x + Math.cos(angle + 1) * endR,
+        aura.y + Math.sin(angle + 1) * endR
+      );
+      ctx.stroke();
+    }
+    
+    // Core eye
+    ctx.fillStyle = '#ff0044';
+    ctx.shadowColor = '#ff0044';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(aura.x, aura.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  }
+
+  function drawStunEffect() {
+    if (!G.playerStunned) return;
+    
+    ctx.save();
+    
+    const pr = playerRect();
+    const centerX = pr.x + pr.w / 2;
+    const centerY = pr.y + pr.h / 2;
+    
+    // Screen edge vignette
+    ctx.fillStyle = 'rgba(26, 26, 46, 0.3)';
+    ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    
+    // Stun stars around player
+    ctx.fillStyle = '#ffcc00';
+    ctx.shadowColor = '#ffcc00';
+    ctx.shadowBlur = 10;
+    const starCount = 5;
+    for (let i = 0; i < starCount; i++) {
+      const angle = (Date.now() / 200) + (i * Math.PI * 2 / starCount);
+      const dist = 35;
+      const sx = centerX + Math.cos(angle) * dist;
+      const sy = centerY - 40 + Math.sin(angle * 2) * 10;
+      
+      // Draw star
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✦', sx, sy);
+    }
+    
+    // STUNNED text
+    const flash = Math.sin(Date.now() / 100) > 0;
+    if (flash) {
+      ctx.fillStyle = '#ff0044';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 15;
+      ctx.fillText('STUNNED!', centerX, centerY - 60);
+    }
+    
+    // Timer bar
+    const barWidth = 40;
+    const barHeight = 4;
+    const remaining = G.stunTimer / BOSS_ZASETSU.stunDuration;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(centerX - barWidth/2, centerY - 75, barWidth, barHeight);
+    ctx.fillStyle = '#ff0044';
+    ctx.fillRect(centerX - barWidth/2, centerY - 75, barWidth * remaining, barHeight);
+    
+    ctx.restore();
+  }
+
   function drawLaserWarning() {
     if (!G.laserWarning || !G.boss) return;
     
@@ -13156,6 +13705,36 @@
       ctx.fill();
       
       ctx.shadowBlur = 0;
+    } else if (p.type === 'darkbolt') {
+      // Zasetsu dark tentacle bolt
+      ctx.shadowColor = '#533483';
+      ctx.shadowBlur = 20;
+      
+      // Outer dark glow
+      ctx.fillStyle = 'rgba(26, 26, 46, 0.6)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size + 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Main bolt
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      gradient.addColorStop(0, '#533483');
+      gradient.addColorStop(0.5, '#1a1a2e');
+      gradient.addColorStop(1, '#16213e');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner evil eye
+      ctx.fillStyle = '#ff0044';
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
     }
     
     ctx.restore();
@@ -13166,7 +13745,10 @@
     
     // Boss name
     let bossName, nameColor;
-    if (G.currentBossType === 'fortius') {
+    if (G.currentBossType === 'zasetsu') {
+      bossName = '👁️ ZASETSU 👁️';
+      nameColor = '#ff0044';
+    } else if (G.currentBossType === 'fortius') {
       bossName = '🔮 FORTIUS 🔮';
       nameColor = '#a855f7';
     } else if (G.currentBossType === 'maxdown') {

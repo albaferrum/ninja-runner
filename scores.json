@@ -1,8 +1,27 @@
 [
   {
+    "character": "kagi",
+    "location": "dark",
+    "nickname": "Kagimagi",
+    "score": 10099,
+    "timestamp": 1767541388672,
+    "uid": "1A7evvoygSejWuPR792d1i6E2oI2"
+  },
+  {
     "character": "ringo",
-    "nickname": "cem",
-    "score": 3091
+    "location": "mountain",
+    "nickname": "Cem",
+    "score": 5003,
+    "timestamp": 1767543130246,
+    "uid": "59oGHzxyVBPKP89BIjFVhZ1S6pF3"
+  },
+  {
+    "character": "joaryu",
+    "location": "forest",
+    "nickname": "aleykümselam amm",
+    "score": 84,
+    "timestamp": 1767528105655,
+    "uid": "8hlsiPe7WdWrOvOnNEmzAMHKc9z1"
   },
   {
     "character": "kazuya",
@@ -13,6 +32,14 @@
     "character": "kagi",
     "nickname": "Best Kagi EU",
     "score": 1365
+  },
+  {
+    "character": "susumu",
+    "location": "dark",
+    "nickname": "Susu",
+    "score": 3524,
+    "timestamp": 1767538175424,
+    "uid": "KE2HBtwf1KOJ73NSww49PUvGFBN2"
   },
   {
     "character": "ringo",
