@@ -3820,7 +3820,7 @@
 
     // Extra Lives
     dojoExtraLifeStatus.textContent = `Mevcut: +${permBonuses.extraLives} can`;
-    if (G.coins >= 3000) {
+    if (G.coins >= 1500) {
       dojoExtraLife.classList.remove('cant-afford');
       buyExtraLife.disabled = false;
     } else {
@@ -3890,8 +3890,8 @@
   });
 
   buyExtraLife.addEventListener('click', async () => {
-    if (G.coins < 3000) return;
-    G.coins -= 3000;
+    if (G.coins < 1500) return;
+    G.coins -= 1500;
     permBonuses.extraLives += 1;
     await saveUserData();
     // Track dojo purchase
