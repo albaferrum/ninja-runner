@@ -7626,6 +7626,7 @@
       // Boss aktifken menzil ve hız artırılır - boss'a ulaşabilmesi için
       const bossBonus = G.bossActive ? 200 : 0;
       const bossVx = G.bossActive ? 500 : 0;
+      console.log('Creating katanaSlash - bossActive:', G.bossActive, 'bossBonus:', bossBonus);
       G.projectiles.push({
         type: 'katanaSlash',
         x: pr.x + pr.w - 10,
