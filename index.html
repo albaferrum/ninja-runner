@@ -54,6 +54,17 @@
       background: radial-gradient(ellipse at center, rgba(80,20,80,0.3) 0%, transparent 70%),
                   linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
     }
+    .auth-logo {
+      width: min(280px, 70%);
+      height: auto;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 30px rgba(255,100,100,0.4));
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
     .auth-container {
       display: flex;
       flex-direction: column;
@@ -1336,6 +1347,7 @@
 
   <!-- ===== AUTH SCREEN (Login/Register) ===== -->
   <div class="screen active" id="authScreen">
+    <img src="img/logo.png" alt="RPGTURK Runner Logo" class="auth-logo" />
     <div class="screen-title">🥷 RPGTURK Runner v1.0</div>
     <div class="screen-subtitle">Gölgelerde koş, düşmanları alt et!</div>
     
@@ -1655,7 +1667,7 @@
           <div class="dojo-item-icon">❤️</div>
           <div class="dojo-item-info">
             <div class="dojo-item-name">Ekstra Can</div>
-            <div class="dojo-item-desc">Her oyuna +1 can ile başla!</div>
+            <div class="dojo-item-desc">Her oyuna +1 can ile başla! Her satın alımda fiyatı artar!</div>
           </div>
           <div class="dojo-item-right">
             <div class="dojo-item-price" id="dojoExtraLifePrice">🪙 1000</div>
