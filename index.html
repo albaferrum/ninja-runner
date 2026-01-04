@@ -166,10 +166,11 @@
     #charSelectScreen {
       background: radial-gradient(ellipse at center, rgba(20,60,100,0.3) 0%, transparent 70%),
                   linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
-      overflow-y: auto;
+      overflow-y: scroll !important;
+      -webkit-overflow-scrolling: touch;
       justify-content: flex-start;
       padding-top: 40px;
-      padding-bottom: 40px;
+      padding-bottom: 100px;
       padding-right: 180px;
       position: relative;
     }
