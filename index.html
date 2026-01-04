@@ -1239,6 +1239,27 @@
       .location-name {
         font-size: 16px;
       }
+      .location-select-banner {
+        display: none;
+      }
+    }
+    .location-select-banner {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 280px;
+      height: auto;
+      filter: drop-shadow(0 0 20px rgba(100,150,255,0.3));
+      border-radius: 12px;
+      z-index: 50;
+      pointer-events: none;
+    }
+    @media (max-width: 900px) {
+      .location-select-banner {
+        width: 180px;
+        bottom: 10px;
+        right: 10px;
+      }
     }
 
     /* ===== CHARACTER SELECT MOBILE RESPONSIVE ===== */
@@ -1735,8 +1756,6 @@
     </div>
 
     <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
-    
-    <img src="img/ninja-banner.png" alt="Ninja Banner" class="char-select-banner" />
   </div>
 
   <!-- ===== DOJO OVERLAY ===== -->
@@ -1886,6 +1905,8 @@
     </div>
 
     <button class="btn" id="locationStartBtn">Oyuna Başla! ⚔️</button>
+    
+    <img src="img/ninja-banner.png" alt="Ninja Banner" class="location-select-banner" />
   </div>
 
   <!-- ===== LEADERBOARD SCREEN ===== -->
