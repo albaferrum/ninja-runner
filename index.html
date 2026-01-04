@@ -193,11 +193,27 @@
       transform: scale(1.05);
     }
     .char-select-banner {
-      width: min(400px, 80%);
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 280px;
       height: auto;
-      margin-bottom: 15px;
       filter: drop-shadow(0 0 20px rgba(100,150,255,0.3));
       border-radius: 12px;
+      z-index: 50;
+      pointer-events: none;
+    }
+    @media (max-width: 900px) {
+      .char-select-banner {
+        width: 180px;
+        bottom: 10px;
+        right: 10px;
+      }
+    }
+    @media (max-width: 600px) {
+      .char-select-banner {
+        display: none;
+      }
     }
     /* Profile Modal */
     .profile-modal {
@@ -1517,8 +1533,6 @@
     <!-- Coin display top right (clickable for profile) -->
     <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 Profil | 0</div>
     
-    <img src="img/ninja-banner.png" alt="Ninja Banner" class="char-select-banner" />
-    
     <div class="screen-title">Ninja Seç</div>
     <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
     
@@ -1728,6 +1742,8 @@
     </div>
 
     <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
+    
+    <img src="img/ninja-banner.png" alt="Ninja Banner" class="char-select-banner" />
   </div>
 
   <!-- ===== DOJO OVERLAY ===== -->
