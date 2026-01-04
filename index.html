@@ -174,19 +174,27 @@
       padding: 20px;
       padding-top: 30px;
       padding-bottom: 50px;
-      padding-right: 170px;
+    }
+    /* Top navigation bar */
+    .char-select-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      width: min(900px, 95%);
     }
     .char-select-coins {
       background: rgba(255,180,0,0.2);
       border: 2px solid rgba(255,180,0,0.4);
       padding: 10px 20px;
       border-radius: 20px;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       color: #ffd700;
       cursor: pointer;
       transition: all 0.2s;
-      margin-bottom: 15px;
     }
     .char-select-coins:hover {
       background: rgba(255,180,0,0.35);
@@ -298,21 +306,13 @@
     .profile-value.score {
       color: #8b5cf6;
     }
-    /* Buttons panel - fixed top right */
+    /* Top bar buttons - inline with profile */
     .char-select-sidebar {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 150;
+      display: contents;
     }
     .char-select-sidebar .btn-secondary {
-      width: 130px;
-      text-align: center;
-      padding: 10px 14px;
-      font-size: 12px;
+      padding: 10px 16px;
+      font-size: 13px;
     }
     .char-grid {
       display: grid;
@@ -1247,11 +1247,17 @@
         padding: 15px;
         padding-top: 20px;
         padding-bottom: 40px;
-        padding-right: 15px;
+      }
+      .char-select-topbar {
+        gap: 8px;
       }
       .char-select-coins {
         font-size: 14px;
-        padding: 6px 12px;
+        padding: 8px 14px;
+      }
+      .char-select-topbar .btn-secondary {
+        padding: 8px 12px;
+        font-size: 11px;
       }
       .char-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -1272,20 +1278,18 @@
         font-size: 8px;
         padding: 5px;
       }
-      .char-select-sidebar {
-        top: 70px;
-        right: 10px;
-        gap: 6px;
-      }
-      .char-select-sidebar .btn-secondary {
-        width: 100px;
-        padding: 8px 10px;
-        font-size: 10px;
-      }
     }
     @media (max-width: 600px) {
-      #charSelectScreen {
-        padding-right: 120px;
+      .char-select-topbar {
+        gap: 6px;
+      }
+      .char-select-coins {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+      .char-select-topbar .btn-secondary {
+        padding: 6px 10px;
+        font-size: 10px;
       }
       .char-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1300,15 +1304,6 @@
       }
       .char-skills {
         display: none;
-      }
-      .char-select-sidebar {
-        top: 60px;
-        right: 8px;
-      }
-      .char-select-sidebar .btn-secondary {
-        width: 90px;
-        font-size: 9px;
-        padding: 6px 8px;
       }
     }
 
@@ -1530,8 +1525,14 @@
 
   <!-- ===== CHARACTER SELECT SCREEN ===== -->
   <div class="screen" id="charSelectScreen">
-    <!-- Coin display top right (clickable for profile) -->
-    <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 Profil | 0</div>
+    <!-- Top navigation bar -->
+    <div class="char-select-topbar">
+      <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 Profil | 0</div>
+      <button class="btn-secondary" id="dojoBtn" style="background: rgba(255,180,0,0.3);">🥋 Dojo</button>
+      <button class="btn-secondary" id="arenaBtn" style="background: rgba(255,50,50,0.3);">⚔️ Arena</button>
+      <button class="btn-secondary" id="charSelectLeaderboardBtn">🏆 Skor Tablosu</button>
+      <button class="btn-secondary" id="logoutBtn" style="background: rgba(255,100,100,0.2);">🚪 Çıkış Yap</button>
+    </div>
     
     <div class="screen-title">Ninja Seç</div>
     <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
@@ -1731,14 +1732,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Right side panel -->
-    <div class="char-select-sidebar">
-      <button class="btn-secondary" id="dojoBtn" style="background: rgba(255,180,0,0.3);">🥋 Dojo</button>
-      <button class="btn-secondary" id="arenaBtn" style="background: rgba(255,50,50,0.3);">⚔️ Arena</button>
-      <button class="btn-secondary" id="charSelectLeaderboardBtn">🏆 Skor Tablosu</button>
-      <button class="btn-secondary" id="logoutBtn" style="background: rgba(255,100,100,0.2);">🚪 Çıkış Yap</button>
     </div>
 
     <button class="btn" id="startBtn" disabled>Mekan Seç →</button>
