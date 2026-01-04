@@ -173,6 +173,95 @@
       font-size: 18px;
       font-weight: 700;
       color: #ffd700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .char-select-coins:hover {
+      background: rgba(255,180,0,0.35);
+      transform: scale(1.05);
+    }
+    /* Profile Modal */
+    .profile-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    .profile-modal.active {
+      display: flex;
+    }
+    .profile-content {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid rgba(139,92,246,0.5);
+      border-radius: 20px;
+      padding: 30px 40px;
+      min-width: 350px;
+      max-width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .profile-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .profile-close {
+      background: rgba(239,68,68,0.2);
+      border: 2px solid rgba(239,68,68,0.4);
+      color: #ef4444;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .profile-close:hover {
+      background: rgba(239,68,68,0.4);
+    }
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .profile-row:last-child {
+      border-bottom: none;
+    }
+    .profile-label {
+      color: #a0a0a0;
+      font-size: 14px;
+    }
+    .profile-value {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .profile-value.coins {
+      color: #ffd700;
+    }
+    .profile-value.wins {
+      color: #22c55e;
+    }
+    .profile-value.losses {
+      color: #ef4444;
+    }
+    .profile-value.score {
+      color: #8b5cf6;
     }
     /* Right side panel for buttons */
     .char-select-sidebar {
@@ -1285,10 +1374,48 @@
     <button class="btn-secondary" id="nickLeaderboardBtn">🏆 Skor Tablosu</button>
   </div>
 
+  <!-- ===== PROFILE MODAL ===== -->
+  <div class="profile-modal" id="profileModal">
+    <div class="profile-content">
+      <div class="profile-header">
+        <div class="profile-title">👤 Profil</div>
+        <button class="profile-close" id="profileClose">×</button>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">👤 İsim</span>
+        <span class="profile-value" id="profileName">-</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">🪙 Coin</span>
+        <span class="profile-value coins" id="profileCoins">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">🏆 Max Puan</span>
+        <span class="profile-value score" id="profileMaxScore">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">⚔️ Arena Kazanılan</span>
+        <span class="profile-value wins" id="profileArenaWins">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">💥 Arena Kaybedilen</span>
+        <span class="profile-value losses" id="profileArenaLosses">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">👹 Yok Edilen Bosslar</span>
+        <span class="profile-value" id="profileBossKills">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">🎪 Dojo İtemleri</span>
+        <span class="profile-value" id="profileDojoItems">0</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== CHARACTER SELECT SCREEN ===== -->
   <div class="screen" id="charSelectScreen">
-    <!-- Coin display top right -->
-    <div class="char-select-coins" id="charSelectCoins">🪙 0</div>
+    <!-- Coin display top right (clickable for profile) -->
+    <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 0</div>
     
     <div class="screen-title">Ninja Seç</div>
     <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
@@ -2333,6 +2460,8 @@
 
   // Dojo elements
   const charSelectCoins = document.getElementById('charSelectCoins');
+  const profileModal = document.getElementById('profileModal');
+  const profileClose = document.getElementById('profileClose');
   const dojoBtn = document.getElementById('dojoBtn');
   const dojoOverlay = document.getElementById('dojoOverlay');
   const dojoCoins = document.getElementById('dojoCoins');
@@ -3705,6 +3834,10 @@
     G.coins -= 3000;
     permBonuses.doubleJump = true;
     await saveUserData();
+    // Track dojo purchase
+    if (currentUser && currentUser.uid) {
+      database.ref(`users/${currentUser.uid}/dojoItems`).transaction((current) => (current || 0) + 1);
+    }
     updateCoinsDisplay();
     updateDojoUI();
   });
@@ -3714,6 +3847,10 @@
     G.coins -= 3000;
     permBonuses.extraLives += 1;
     await saveUserData();
+    // Track dojo purchase
+    if (currentUser && currentUser.uid) {
+      database.ref(`users/${currentUser.uid}/dojoItems`).transaction((current) => (current || 0) + 1);
+    }
     updateCoinsDisplay();
     updateDojoUI();
   });
@@ -3723,6 +3860,10 @@
     G.coins -= 3000;
     permBonuses.airDash = true;
     await saveUserData();
+    // Track dojo purchase
+    if (currentUser && currentUser.uid) {
+      database.ref(`users/${currentUser.uid}/dojoItems`).transaction((current) => (current || 0) + 1);
+    }
     updateCoinsDisplay();
     updateDojoUI();
   });
@@ -3735,6 +3876,50 @@
 
   dojoClose.addEventListener('click', () => {
     dojoOverlay.classList.remove('active');
+  });
+
+  // ===== PROFILE MODAL =====
+  async function openProfile() {
+    if (!currentUser || !currentUser.uid) {
+      alert('Profil görüntülemek için giriş yapmalısınız!');
+      return;
+    }
+    
+    try {
+      // Load user data from Firebase
+      const snapshot = await database.ref(`users/${currentUser.uid}`).once('value');
+      const userData = snapshot.val() || {};
+      
+      // Update profile modal with data
+      document.getElementById('profileName').textContent = userData.username || currentUser.username || '-';
+      document.getElementById('profileCoins').textContent = (userData.coins || 0).toLocaleString();
+      document.getElementById('profileMaxScore').textContent = (userData.highScore || 0).toLocaleString();
+      document.getElementById('profileArenaWins').textContent = userData.arenaWins || 0;
+      document.getElementById('profileArenaLosses').textContent = userData.arenaLosses || 0;
+      document.getElementById('profileBossKills').textContent = userData.bossKills || 0;
+      document.getElementById('profileDojoItems').textContent = userData.dojoItems || 0;
+      
+      // Show modal
+      profileModal.classList.add('active');
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      alert('Profil yüklenirken hata oluştu!');
+    }
+  }
+
+  // Profile open (click on coins)
+  charSelectCoins.addEventListener('click', openProfile);
+
+  // Profile close
+  profileClose.addEventListener('click', () => {
+    profileModal.classList.remove('active');
+  });
+
+  // Close profile when clicking outside
+  profileModal.addEventListener('click', (e) => {
+    if (e.target === profileModal) {
+      profileModal.classList.remove('active');
+    }
   });
 
   // ===== ARENA FUNCTIONS =====
@@ -5196,6 +5381,24 @@
     
     console.log('🏁 Match ended! Won:', won);
     
+    // Save arena stats to Firebase
+    if (currentUser && currentUser.uid) {
+      try {
+        const statsRef = database.ref(`users/${currentUser.uid}`);
+        const snapshot = await statsRef.once('value');
+        const userData = snapshot.val() || {};
+        const newWins = (userData.arenaWins || 0) + (won ? 1 : 0);
+        const newLosses = (userData.arenaLosses || 0) + (won ? 0 : 1);
+        await statsRef.update({
+          arenaWins: newWins,
+          arenaLosses: newLosses
+        });
+        console.log('📊 Arena stats saved:', { wins: newWins, losses: newLosses });
+      } catch (err) {
+        console.error('Error saving arena stats:', err);
+      }
+    }
+    
     // If we lost, notify opponent via Firebase immediately
     if (!won && arenaState.roomId) {
       const myPath = arenaState.isHost ? 'host' : 'guest';
@@ -6612,6 +6815,13 @@
     G.laserActive = false;
     G.speed = 280; // Resume game
     G.score += bonus; // Bonus for defeating boss
+    
+    // Save boss kill to Firebase
+    if (currentUser && currentUser.uid) {
+      database.ref(`users/${currentUser.uid}/bossKills`).transaction((current) => {
+        return (current || 0) + 1;
+      });
+    }
     
     // Victory particles
     const particleColors = bossType === 'maxdown' 
