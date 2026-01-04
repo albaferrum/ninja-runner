@@ -1684,7 +1684,7 @@
             <div class="dojo-item-desc">Düşmanın üstüne düşerek onu ez!</div>
           </div>
           <div class="dojo-item-right">
-            <div class="dojo-item-price">🪙 2500</div>
+            <div class="dojo-item-price">🪙 1500</div>
             <button class="dojo-buy-btn" id="buySuperLanding">Satın Al</button>
             <div class="dojo-item-status" id="dojoSuperLandingStatus"></div>
           </div>
@@ -3859,7 +3859,7 @@
       buySuperLanding.textContent = '✓ Alındı';
       buySuperLanding.classList.add('owned');
       buySuperLanding.disabled = true;
-    } else if (G.coins >= 2500) {
+    } else if (G.coins >= 1500) {
       dojoSuperLanding.classList.remove('owned', 'cant-afford');
       dojoSuperLandingStatus.textContent = '';
       buySuperLanding.textContent = 'Satın Al';
@@ -3916,8 +3916,8 @@
   });
 
   buySuperLanding.addEventListener('click', async () => {
-    if (permBonuses.superLanding || G.coins < 2500) return;
-    G.coins -= 2500;
+    if (permBonuses.superLanding || G.coins < 1500) return;
+    G.coins -= 1500;
     permBonuses.superLanding = true;
     await saveUserData();
     // Track dojo purchase
