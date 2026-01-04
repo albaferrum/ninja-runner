@@ -10529,13 +10529,16 @@
       // Chisa: Katana slash with real sword
       p.slashPhase += G.dt * 20;
       const swingAngle = Math.sin(p.slashPhase * 2) * 0.8;
+      const isBossMode = p.w > 100; // Boss mode has larger width
+      const scale = isBossMode ? 2.5 : 1;
       
-      ctx.translate(p.x + 20, p.y);
+      ctx.translate(p.x + 20, p.y + (isBossMode ? 20 : 0));
+      ctx.scale(scale, scale);
       ctx.rotate(swingAngle - 0.3);
       
       // Katana blade
-      ctx.fillStyle = '#e8e8e8';
-      ctx.strokeStyle = '#ccc';
+      ctx.fillStyle = isBossMode ? '#ffd700' : '#e8e8e8';
+      ctx.strokeStyle = isBossMode ? '#ff6b00' : '#ccc';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -10575,33 +10578,56 @@
       ctx.ellipse(0, 0, 3, 8, 0, 0, Math.PI * 2);
       ctx.fill();
       
-      // Slash trail effect
-      ctx.globalAlpha = 0.4;
-      ctx.strokeStyle = '#e74c3c';
-      ctx.lineWidth = 4;
+      // Slash trail effect - bigger and more dramatic in boss mode
+      ctx.globalAlpha = isBossMode ? 0.7 : 0.4;
+      ctx.strokeStyle = isBossMode ? '#ff4444' : '#e74c3c';
+      ctx.lineWidth = isBossMode ? 8 : 4;
       ctx.beginPath();
       ctx.arc(0, 0, 50, -0.8 - swingAngle, 0.5 - swingAngle);
       ctx.stroke();
+      
+      // Extra energy wave in boss mode
+      if (isBossMode) {
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#ffaa00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 70, -1 - swingAngle, 0.7 - swingAngle);
+        ctx.stroke();
+      }
     } else if (p.type === 'punch') {
       // Butsuo: Powerful punch effect
       p.punchPhase += G.dt * 15;
       const extend = Math.min(1, p.punchPhase / 3) * 40;
       const shake = Math.sin(p.punchPhase * 30) * 2;
+      const isBossMode = p.w > 100; // Boss mode has larger width
+      const scale = isBossMode ? 2 : 1;
       
       ctx.translate(p.x, p.y + shake);
+      ctx.scale(scale, scale);
+      
+      // Energy aura in boss mode
+      if (isBossMode) {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.arc(30 + extend, 0, 50 + Math.sin(p.punchPhase * 5) * 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       
       // Arm
-      ctx.fillStyle = '#2a2a3a';
+      ctx.fillStyle = isBossMode ? '#1a1a2a' : '#2a2a3a';
       ctx.fillRect(-15, -8, 35 + extend * 0.5, 16);
       
       // Fist
-      ctx.fillStyle = '#f5deb3';
+      ctx.fillStyle = isBossMode ? '#ffd700' : '#f5deb3';
       ctx.beginPath();
       ctx.arc(20 + extend, 0, 20, 0, Math.PI * 2);
       ctx.fill();
       
       // Knuckles
-      ctx.fillStyle = '#deb887';
+      ctx.fillStyle = isBossMode ? '#ff8800' : '#deb887';
       ctx.beginPath();
       ctx.arc(32 + extend, -6, 5, 0, Math.PI * 2);
       ctx.arc(38 + extend, -2, 5, 0, Math.PI * 2);
@@ -10609,14 +10635,14 @@
       ctx.arc(32 + extend, 8, 4, 0, Math.PI * 2);
       ctx.fill();
       
-      // Impact burst
-      if (extend > 30) {
+      // Impact burst - always show in boss mode
+      if (extend > 30 || isBossMode) {
         ctx.globalAlpha = 0.8;
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 4;
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI - Math.PI / 2;
-          const len = 15 + Math.random() * 20;
+        ctx.strokeStyle = isBossMode ? '#ff4400' : '#ffd700';
+        ctx.lineWidth = isBossMode ? 6 : 4;
+        for (let i = 0; i < (isBossMode ? 12 : 8); i++) {
+          const angle = (i / (isBossMode ? 12 : 8)) * Math.PI - Math.PI / 2;
+          const len = (isBossMode ? 25 : 15) + Math.random() * (isBossMode ? 35 : 20);
           ctx.beginPath();
           ctx.moveTo(45 + extend, 0);
           ctx.lineTo(45 + extend + Math.cos(angle) * len, Math.sin(angle) * len);
@@ -10624,20 +10650,20 @@
         }
         
         // Shockwave circles
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = isBossMode ? 'rgba(255,100,0,0.7)' : 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = isBossMode ? 5 : 3;
         const wave = (p.punchPhase * 3) % 1;
         ctx.beginPath();
-        ctx.arc(50 + extend, 0, 10 + wave * 30, 0, Math.PI * 2);
+        ctx.arc(50 + extend, 0, 10 + wave * (isBossMode ? 50 : 30), 0, Math.PI * 2);
         ctx.stroke();
       }
       
-      // "POW" text effect
-      if (extend > 35) {
+      // "POW" text effect - bigger in boss mode
+      if (extend > 35 || isBossMode) {
         ctx.globalAlpha = 0.9;
-        ctx.fillStyle = '#ff4444';
-        ctx.font = 'bold 24px system-ui';
-        ctx.fillText('POW!', 55 + extend, -15);
+        ctx.fillStyle = isBossMode ? '#ff0000' : '#ff4444';
+        ctx.font = isBossMode ? 'bold 36px system-ui' : 'bold 24px system-ui';
+        ctx.fillText(isBossMode ? 'SMASH!' : 'POW!', 55 + extend, -15);
       }
     } else if (p.type === 'poisonShot') {
       // Teki: Poison projectile
