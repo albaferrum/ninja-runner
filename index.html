@@ -1415,7 +1415,7 @@
   <!-- ===== CHARACTER SELECT SCREEN ===== -->
   <div class="screen" id="charSelectScreen">
     <!-- Coin display top right (clickable for profile) -->
-    <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 0</div>
+    <div class="char-select-coins" id="charSelectCoins" title="Profili Gör">🪙 Profil | 0</div>
     
     <div class="screen-title">Ninja Seç</div>
     <div class="screen-subtitle" id="welcomeText">Hoş geldin!</div>
@@ -1658,7 +1658,7 @@
             <div class="dojo-item-desc">Her oyuna +1 can ile başla!</div>
           </div>
           <div class="dojo-item-right">
-            <div class="dojo-item-price">🪙 3000</div>
+            <div class="dojo-item-price">🪙 1500</div>
             <button class="dojo-buy-btn" id="buyExtraLife">Satın Al</button>
             <div class="dojo-item-status" id="dojoExtraLifeStatus">x0</div>
           </div>
@@ -1671,9 +1671,22 @@
             <div class="dojo-item-desc">Havada E tuşu ile ileri atıl!</div>
           </div>
           <div class="dojo-item-right">
-            <div class="dojo-item-price">🪙 3000</div>
+            <div class="dojo-item-price">🪙 2000</div>
             <button class="dojo-buy-btn" id="buyAirDash">Satın Al</button>
             <div class="dojo-item-status" id="dojoAirDashStatus"></div>
+          </div>
+        </div>
+        
+        <div class="dojo-item" id="dojoSuperLanding">
+          <div class="dojo-item-icon">🦋</div>
+          <div class="dojo-item-info">
+            <div class="dojo-item-name">Süper İniş</div>
+            <div class="dojo-item-desc">Düşmanın üstüne düşerek onu ez!</div>
+          </div>
+          <div class="dojo-item-right">
+            <div class="dojo-item-price">🪙 2500</div>
+            <button class="dojo-buy-btn" id="buySuperLanding">Satın Al</button>
+            <div class="dojo-item-status" id="dojoSuperLandingStatus"></div>
           </div>
         </div>
       </div>
@@ -2470,10 +2483,13 @@
   const dojoDoubleJumpStatus = document.getElementById('dojoDoubleJumpStatus');
   const dojoExtraLifeStatus = document.getElementById('dojoExtraLifeStatus');
   const dojoAirDashStatus = document.getElementById('dojoAirDashStatus');
+  const dojoSuperLandingStatus = document.getElementById('dojoSuperLandingStatus');
   const buyDoubleJump = document.getElementById('buyDoubleJump');
   const buyExtraLife = document.getElementById('buyExtraLife');
   const buyAirDash = document.getElementById('buyAirDash');
+  const buySuperLanding = document.getElementById('buySuperLanding');
   const dojoAirDash = document.getElementById('dojoAirDash');
+  const dojoSuperLanding = document.getElementById('dojoSuperLanding');
   const dojoClose = document.getElementById('dojoClose');
 
   // Arena elements
@@ -2496,7 +2512,8 @@
   let permBonuses = {
     doubleJump: false,
     extraLives: 0,
-    airDash: false
+    airDash: false,
+    superLanding: false
   };
 
   const canvas = document.getElementById('game');
@@ -3611,6 +3628,7 @@
         doubleJump: false,
         extraLives: 0,
         airDash: false,
+        superLanding: false,
         createdAt: Date.now()
       });
 
@@ -3624,6 +3642,7 @@
       permBonuses.doubleJump = false;
       permBonuses.extraLives = 0;
       permBonuses.airDash = false;
+      permBonuses.superLanding = false;
       localStorage.setItem('ninja_user', JSON.stringify(currentUser));
       welcomeText.textContent = `Hoş geldin, ${username}!`;
       updateCoinsDisplay();
@@ -3693,6 +3712,7 @@
       permBonuses.doubleJump = userData.doubleJump || false;
       permBonuses.extraLives = userData.extraLives || 0;
       permBonuses.airDash = userData.airDash || false;
+      permBonuses.superLanding = userData.superLanding || false;
       
       updateCoinsDisplay();
       updateDojoUI();
@@ -3730,11 +3750,13 @@
         permBonuses.doubleJump = data.doubleJump || false;
         permBonuses.extraLives = data.extraLives || 0;
         permBonuses.airDash = data.airDash || false;
+        permBonuses.superLanding = data.superLanding || false;
       } else {
         G.coins = 0;
         permBonuses.doubleJump = false;
         permBonuses.extraLives = 0;
         permBonuses.airDash = false;
+        permBonuses.superLanding = false;
       }
       updateCoinsDisplay();
       updateDojoUI();
@@ -3744,6 +3766,7 @@
       permBonuses.doubleJump = false;
       permBonuses.extraLives = 0;
       permBonuses.airDash = false;
+      permBonuses.superLanding = false;
     }
   }
 
@@ -3755,7 +3778,8 @@
         coins: G.coins,
         doubleJump: permBonuses.doubleJump,
         extraLives: permBonuses.extraLives,
-        airDash: permBonuses.airDash
+        airDash: permBonuses.airDash,
+        superLanding: permBonuses.superLanding
       });
     } catch (err) {
       console.error('Failed to save user data:', err);
@@ -3812,7 +3836,7 @@
       buyAirDash.textContent = '✓ Alındı';
       buyAirDash.classList.add('owned');
       buyAirDash.disabled = true;
-    } else if (G.coins >= 3000) {
+    } else if (G.coins >= 2000) {
       dojoAirDash.classList.remove('owned', 'cant-afford');
       dojoAirDashStatus.textContent = '';
       buyAirDash.textContent = 'Satın Al';
@@ -3825,6 +3849,29 @@
       buyAirDash.textContent = 'Satın Al';
       buyAirDash.classList.remove('owned');
       buyAirDash.disabled = true;
+    }
+
+    // Super Landing
+    if (permBonuses.superLanding) {
+      dojoSuperLanding.classList.add('owned');
+      dojoSuperLanding.classList.remove('cant-afford');
+      dojoSuperLandingStatus.textContent = '✓ Sahipsin';
+      buySuperLanding.textContent = '✓ Alındı';
+      buySuperLanding.classList.add('owned');
+      buySuperLanding.disabled = true;
+    } else if (G.coins >= 2500) {
+      dojoSuperLanding.classList.remove('owned', 'cant-afford');
+      dojoSuperLandingStatus.textContent = '';
+      buySuperLanding.textContent = 'Satın Al';
+      buySuperLanding.classList.remove('owned');
+      buySuperLanding.disabled = false;
+    } else {
+      dojoSuperLanding.classList.remove('owned');
+      dojoSuperLanding.classList.add('cant-afford');
+      dojoSuperLandingStatus.textContent = '';
+      buySuperLanding.textContent = 'Satın Al';
+      buySuperLanding.classList.remove('owned');
+      buySuperLanding.disabled = true;
     }
   }
 
@@ -3856,9 +3903,22 @@
   });
 
   buyAirDash.addEventListener('click', async () => {
-    if (permBonuses.airDash || G.coins < 3000) return;
-    G.coins -= 3000;
+    if (permBonuses.airDash || G.coins < 2000) return;
+    G.coins -= 2000;
     permBonuses.airDash = true;
+    await saveUserData();
+    // Track dojo purchase
+    if (currentUser && currentUser.uid) {
+      database.ref(`users/${currentUser.uid}/dojoItems`).transaction((current) => (current || 0) + 1);
+    }
+    updateCoinsDisplay();
+    updateDojoUI();
+  });
+
+  buySuperLanding.addEventListener('click', async () => {
+    if (permBonuses.superLanding || G.coins < 2500) return;
+    G.coins -= 2500;
+    permBonuses.superLanding = true;
     await saveUserData();
     // Track dojo purchase
     if (currentUser && currentUser.uid) {
@@ -5966,6 +6026,7 @@
         permBonuses.doubleJump = userData.doubleJump || false;
         permBonuses.extraLives = userData.extraLives || 0;
         permBonuses.airDash = userData.airDash || false;
+        permBonuses.superLanding = userData.superLanding || false;
         
         localStorage.setItem('ninja_user', JSON.stringify(currentUser));
         updateCoinsDisplay();
@@ -11235,6 +11296,31 @@
       const b = { x: oRect.x + pad, y: oRect.y + pad, w: oRect.w - pad * 2, h: oRect.h - pad * 2 };
 
       if (rectsOverlap(a, b)) {
+        // Super Landing - if player is falling (vy > 0) and has the perk, stomp on enemy!
+        if (permBonuses.superLanding && P.vy > 100 && !P.onGround) {
+          // Check if landing on top (player's bottom near enemy's top)
+          const playerBottom = pr.y + pr.h;
+          const enemyTop = oRect.y;
+          if (playerBottom >= enemyTop && playerBottom <= enemyTop + 30) {
+            // Stomp! Destroy enemy with epic particles
+            for (let k = 0; k < 20; k++) {
+              G.particles.push({
+                x: o.x + o.w / 2,
+                y: o.y - o.h / 2,
+                vx: rand(-200, 200),
+                vy: rand(-300, -100),
+                life: rand(0.5, 0.9),
+                color: k % 3 === 0 ? '#fbbf24' : (k % 3 === 1 ? '#f97316' : '#ef4444')
+              });
+            }
+            G.obstacles.splice(i, 1);
+            G.score += 15;
+            // Bounce up after stomp
+            P.vy = -400;
+            continue;
+          }
+        }
+        
         // Ultimate effects
         if (G.ultActive) {
           if (G.ultType === 'moonlight' || G.ultType === 'iceStorm') {
