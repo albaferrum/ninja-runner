@@ -7623,30 +7623,32 @@
       });
     } else if (char.skillX.action === 'katanaSlash') {
       // Chisa: Katana darbesi - kısa menzil ama hızlı
-      // Boss aktifken menzil artırılır
-      const bossBonus = G.bossActive ? 120 : 0;
+      // Boss aktifken menzil ve hız artırılır - boss'a ulaşabilmesi için
+      const bossBonus = G.bossActive ? 200 : 0;
+      const bossVx = G.bossActive ? 500 : 0;
       G.projectiles.push({
         type: 'katanaSlash',
         x: pr.x + pr.w - 10,
         y: pr.y + pr.h * 0.3,
         w: 60 + bossBonus,
-        h: 50,
-        vx: 0,
-        life: 0.25,
+        h: 80,
+        vx: bossVx,
+        life: G.bossActive ? 0.6 : 0.25,
         slashPhase: 0
       });
     } else if (char.skillX.action === 'punch') {
       // Butsuo: Yumruk - kısa menzil ama güçlü
-      // Boss aktifken menzil artırılır
-      const bossBonus = G.bossActive ? 100 : 0;
+      // Boss aktifken menzil ve hız artırılır - boss'a ulaşabilmesi için
+      const bossBonus = G.bossActive ? 180 : 0;
+      const bossVx = G.bossActive ? 450 : 0;
       G.projectiles.push({
         type: 'punch',
         x: pr.x + pr.w,
         y: pr.y + pr.h * 0.4,
         w: 50 + bossBonus,
-        h: 40,
-        vx: 0,
-        life: 0.3,
+        h: 70,
+        vx: bossVx,
+        life: G.bossActive ? 0.6 : 0.3,
         punchPhase: 0
       });
     } else if (char.skillX.action === 'poisonShot') {
