@@ -4926,7 +4926,10 @@
 
   // Sync skill usage to opponent
   function syncSkillToOpponent(skillType, data) {
-    if (!arenaState.roomId || !arenaState.active) return;
+    if (!arenaState.roomId || !arenaState.active) {
+      console.log('⚠️ syncSkillToOpponent skipped:', {roomId: arenaState.roomId, active: arenaState.active});
+      return;
+    }
     
     const playerPath = arenaState.isHost ? 'host' : 'guest';
     const skillData = {
@@ -4938,6 +4941,7 @@
       timestamp: Date.now()
     };
     
+    console.log('📤 Syncing skill to Firebase:', skillData, 'path:', `arena/${arenaState.roomId}/${playerPath}/lastSkill`);
     database.ref(`arena/${arenaState.roomId}/${playerPath}/lastSkill`).set(skillData);
   }
 
