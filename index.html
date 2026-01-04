@@ -10532,6 +10532,12 @@
       const isBossMode = p.w > 100; // Boss mode has larger width
       const scale = isBossMode ? 2.5 : 1;
       
+      // Debug: draw hitbox
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(p.x, p.y - p.h/2, p.w, p.h);
+      
+      ctx.save();
       ctx.translate(p.x + 20, p.y + (isBossMode ? 20 : 0));
       ctx.scale(scale, scale);
       ctx.rotate(swingAngle - 0.3);
@@ -10595,6 +10601,7 @@
         ctx.arc(0, 0, 70, -1 - swingAngle, 0.7 - swingAngle);
         ctx.stroke();
       }
+      ctx.restore(); // Restore from inner save for katanaSlash
     } else if (p.type === 'punch') {
       // Butsuo: Powerful punch effect
       p.punchPhase += G.dt * 15;
@@ -10603,6 +10610,12 @@
       const isBossMode = p.w > 100; // Boss mode has larger width
       const scale = isBossMode ? 2 : 1;
       
+      // Debug: draw hitbox
+      ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(p.x, p.y - p.h/2, p.w, p.h);
+      
+      ctx.save();
       ctx.translate(p.x, p.y + shake);
       ctx.scale(scale, scale);
       
@@ -10665,6 +10678,7 @@
         ctx.font = isBossMode ? 'bold 36px system-ui' : 'bold 24px system-ui';
         ctx.fillText(isBossMode ? 'SMASH!' : 'POW!', 55 + extend, -15);
       }
+      ctx.restore(); // Restore from inner save for punch
     } else if (p.type === 'poisonShot') {
       // Teki: Poison projectile
       p.spin = (p.spin || 0) + G.dt * 12;
