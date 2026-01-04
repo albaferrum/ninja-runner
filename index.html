@@ -7061,9 +7061,16 @@
       // Skip rasengan - it has special damage handling
       if (p.type === 'rasengan') continue;
       
-      const pRect = p.type === 'spear' 
-        ? { x: p.x, y: p.y - p.h / 2, w: p.w, h: p.h }
-        : { x: p.x - 15, y: p.y - 15, w: 30, h: 30 };
+      // Calculate projectile hitbox based on type
+      let pRect;
+      if (p.type === 'spear') {
+        pRect = { x: p.x, y: p.y - p.h / 2, w: p.w, h: p.h };
+      } else if (p.type === 'katanaSlash' || p.type === 'punch') {
+        // Melee attacks use their actual width/height
+        pRect = { x: p.x, y: p.y, w: p.w, h: p.h };
+      } else {
+        pRect = { x: p.x - 15, y: p.y - 15, w: 30, h: 30 };
+      }
       
       const bossRect = { x: boss.x, y: boss.y - boss.h, w: boss.w, h: boss.h };
       
@@ -7616,11 +7623,13 @@
       });
     } else if (char.skillX.action === 'katanaSlash') {
       // Chisa: Katana darbesi - kısa menzil ama hızlı
+      // Boss aktifken menzil artırılır
+      const bossBonus = G.bossActive ? 120 : 0;
       G.projectiles.push({
         type: 'katanaSlash',
         x: pr.x + pr.w - 10,
         y: pr.y + pr.h * 0.3,
-        w: 60,
+        w: 60 + bossBonus,
         h: 50,
         vx: 0,
         life: 0.25,
@@ -7628,11 +7637,13 @@
       });
     } else if (char.skillX.action === 'punch') {
       // Butsuo: Yumruk - kısa menzil ama güçlü
+      // Boss aktifken menzil artırılır
+      const bossBonus = G.bossActive ? 100 : 0;
       G.projectiles.push({
         type: 'punch',
         x: pr.x + pr.w,
         y: pr.y + pr.h * 0.4,
-        w: 50,
+        w: 50 + bossBonus,
         h: 40,
         vx: 0,
         life: 0.3,
