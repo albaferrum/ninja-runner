@@ -2794,7 +2794,7 @@
     t: 0, dt: 0, last: 0,
     running: false, gameOver: false,
 
-    score: 5000, // TEST: Start at 5000 for Fortius boss
+    score: 0,
     speed: 280,
     speedMax: 600,
     speedAccel: 12,
@@ -2828,8 +2828,8 @@
 
     // Boss state
     bossActive: false,
-    riaru1Defeated: true,  // TEST: Skip to Fortius
-    maxdownDefeated: true, // TEST: Skip to Fortius
+    riaru1Defeated: false,
+    maxdownDefeated: false,
     fortiusDefeated: false,
     currentBossType: null, // 'riaru', 'maxdown', or 'fortius'
     boss: null,
@@ -6727,7 +6727,7 @@
   function resetGame() {
     G.running = true;
     G.gameOver = false;
-    G.score = 5000; // TEST: Fortius
+    G.score = 0;
     G.lastCoinScore = 0;
     G.speed = 280;
     G.spawnTimer = rand(G.spawnMin, G.spawnMax);
@@ -6749,8 +6749,8 @@
 
     // Boss reset
     G.bossActive = false;
-    G.riaru1Defeated = true;  // TEST: Fortius
-    G.maxdownDefeated = true; // TEST: Fortius
+    G.riaru1Defeated = false;
+    G.maxdownDefeated = false;
     G.fortiusDefeated = false;
     G.currentBossType = null;
     G.boss = null;
@@ -7046,17 +7046,24 @@
       G.plasmaCharging = G.bossUltiTimer <= 1.5 && G.bossUltiTimer > 0 && !G.plasmaOrbActive;
       
       if (G.bossUltiTimer <= 0 && !G.plasmaOrbActive) {
-        // Launch plasma orb
+        // Launch plasma orb - calculate direction at launch, then go straight
         G.plasmaOrbActive = true;
         G.plasmaCharging = false;
+        
+        const startX = boss.x - 30;
+        const startY = G.groundY - boss.h * 0.6;
+        const dx = P.x - startX;
+        const dy = (P.y - P.h/2) - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
         G.plasmaOrb = {
-          x: boss.x - 30,
-          y: G.groundY - boss.h * 0.6,
+          x: startX,
+          y: startY,
           radius: 35,
           phase: 0,
-          targetX: P.x,
-          targetY: P.y,
-          speed: 180
+          vx: (dx / dist) * 280, // Fixed velocity - goes straight
+          vy: (dy / dist) * 280,
+          life: 4
         };
         boss.attacking = true;
         boss.attackAnim = 1.0;
@@ -7066,16 +7073,11 @@
       if (G.plasmaOrbActive && G.plasmaOrb) {
         const orb = G.plasmaOrb;
         orb.phase += dt * 8;
+        orb.life -= dt;
         
-        // Move toward player
-        const dx = P.x - orb.x;
-        const dy = (G.groundY - 50) - orb.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist > 10) {
-          orb.x += (dx / dist) * orb.speed * dt;
-          orb.y += (dy / dist) * orb.speed * dt;
-        }
+        // Move in straight line (no homing!)
+        orb.x += orb.vx * dt;
+        orb.y += orb.vy * dt;
         
         // Trailing particles
         if (Math.random() < 0.3) {
@@ -7125,8 +7127,19 @@
           }
         }
         
-        // Remove if off screen
-        if (orb.x < -50 || orb.x > WORLD_W + 50) {
+        // Remove if off screen or lifetime expired
+        if (orb.x < -50 || orb.x > WORLD_W + 50 || orb.life <= 0) {
+          // Fizzle out particles
+          for (let k = 0; k < 12; k++) {
+            G.particles.push({
+              x: orb.x,
+              y: orb.y,
+              vx: rand(-100, 100),
+              vy: rand(-100, 100),
+              life: rand(0.2, 0.4),
+              color: ['#a855f7', '#c084fc'][Math.floor(rand(0, 2))]
+            });
+          }
           G.plasmaOrbActive = false;
           G.plasmaOrb = null;
           G.bossUltiTimer = BOSS_FORTIUS.plasmaOrbCooldown;
