@@ -7061,13 +7061,16 @@
       // Skip rasengan - it has special damage handling
       if (p.type === 'rasengan') continue;
       
+      // Skip if already hit boss (for melee attacks that should stay visible)
+      if (p.hasHitBoss) continue;
+      
       // Calculate projectile hitbox based on type
       let pRect;
       if (p.type === 'spear') {
         pRect = { x: p.x, y: p.y - p.h / 2, w: p.w, h: p.h };
       } else if (p.type === 'katanaSlash' || p.type === 'punch') {
         // Melee attacks use their actual width/height
-        pRect = { x: p.x, y: p.y, w: p.w, h: p.h };
+        pRect = { x: p.x, y: p.y - p.h/2, w: p.w, h: p.h };
       } else {
         pRect = { x: p.x - 15, y: p.y - 15, w: 30, h: 30 };
       }
@@ -7076,7 +7079,7 @@
       
       if (rectsOverlap(pRect, bossRect)) {
         // Damage boss
-        const damage = p.type === 'spear' ? 8 : 5;
+        const damage = p.type === 'spear' ? 8 : (p.type === 'katanaSlash' ? 10 : (p.type === 'punch' ? 12 : 5));
         boss.hp -= damage;
         
         // Hit particles
@@ -7091,8 +7094,12 @@
           });
         }
         
-        // Remove projectile (except spear)
-        if (p.type !== 'spear') {
+        // For melee attacks (katanaSlash, punch), mark as hit but don't remove - let them finish their animation
+        if (p.type === 'katanaSlash' || p.type === 'punch') {
+          p.hasHitBoss = true;
+          // Continue showing effect
+        } else if (p.type !== 'spear') {
+          // Remove other projectiles
           G.projectiles.splice(i, 1);
         }
         
