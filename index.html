@@ -4951,7 +4951,15 @@
       return;
     }
     
-    console.log('🎯 Spawning opponent projectile:', skill.type, 'charKey:', charKey, 'action:', skill.type === 'X' ? char.skillX?.action : char.skillF?.action);
+    const skillAction = skill.type === 'X' ? char.skillX?.action : char.skillF?.action;
+    console.log('🎯 Spawning opponent projectile:', {
+      type: skill.type,
+      charKey: charKey,
+      charName: char.name,
+      action: skillAction,
+      skillFromFirebase: skill.charKey,
+      opponentCharKey: arenaState.opponent.charKey
+    });
     
     // Mirror the position and direction for our view
     const x = skill.x;
@@ -5332,6 +5340,7 @@
     P.y = arenaState.player.y;
     P.onGround = arenaState.player.y >= 460;
     P.crouching = arenaKeys.down;
+    P.h = arenaKeys.down ? P.crouchH : P.baseH;
     selectedChar = arenaState.player.charKey;
     
     // Flip if facing left
@@ -5349,7 +5358,9 @@
     P.x = arenaState.opponent.x - P.w / 2;
     P.y = arenaState.opponent.y;
     P.onGround = arenaState.opponent.y >= 460;
-    P.crouching = arenaState.opponent.crouching || false;
+    const oppCrouching = arenaState.opponent.crouching || false;
+    P.crouching = oppCrouching;
+    P.h = oppCrouching ? P.crouchH : P.baseH;
     selectedChar = arenaState.opponent.charKey;
     
     // Flip if facing left
