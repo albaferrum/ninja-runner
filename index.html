@@ -7070,6 +7070,7 @@
   function defeatBoss() {
     const bossType = G.currentBossType;
     const bonus = bossType === 'maxdown' ? 500 : 200;
+    const coinReward = bossType === 'maxdown' ? 100 : 50;
     
     G.bossActive = false;
     if (bossType === 'riaru') {
@@ -7084,6 +7085,7 @@
     G.laserActive = false;
     G.speed = 280; // Resume game
     G.score += bonus; // Bonus for defeating boss
+    G.coins += coinReward; // Coin reward for defeating boss
     
     // Save boss kill to Firebase
     if (currentUser && currentUser.uid) {
@@ -11063,10 +11065,6 @@
     G.speed = Math.min(G.speedMax, G.speed + G.speedAccel * dt);
     G.score += dt * (G.speed / 100) * G.scoreMultiplier;
     
-    // Earn coins based on score (1 coin per 10 points)
-    const newCoins = Math.floor(G.score / 10) - Math.floor((G.score - dt * (G.speed / 100) * G.scoreMultiplier) / 10);
-    if (newCoins > 0) G.coins += newCoins;
-    
     G.groundScroll += effectiveSpeed * dt;
 
     // Update item effects
@@ -11348,7 +11346,8 @@
         const o = G.obstacles[j];
         const oRect = obstacleRect(o);
         if (rectsOverlap(pRect, oRect)) {
-          // Destroy obstacle
+          // Destroy obstacle - give coin reward
+          G.coins += rand(1, 3) | 0; // 1-2 coins per enemy
           for (let k = 0; k < 12; k++) {
             G.particles.push({
               x: o.x + o.w / 2 + rand(-15, 15),
@@ -11477,7 +11476,8 @@
         const puppetR = puppetRect();
         const obstRect = obstacleRect(o);
         if (rectsOverlap(puppetR, obstRect)) {
-          // Puppet blocks the obstacle - destroy it with particles
+          // Puppet blocks the obstacle - destroy it with particles and coin reward
+          G.coins += Math.floor(rand(1, 3)); // 1-2 coins per enemy
           for (let k = 0; k < 15; k++) {
             G.particles.push({
               x: o.x + o.w / 2,
@@ -11510,7 +11510,8 @@
           const playerBottom = pr.y + pr.h;
           const enemyTop = oRect.y;
           if (playerBottom >= enemyTop && playerBottom <= enemyTop + 30) {
-            // Stomp! Destroy enemy with epic particles
+            // Stomp! Destroy enemy with epic particles and coin reward
+            G.coins += rand(1, 3) | 0; // 1-2 coins per enemy
             for (let k = 0; k < 20; k++) {
               G.particles.push({
                 x: o.x + o.w / 2,
@@ -11545,6 +11546,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 10;
+            G.coins += Math.floor(rand(1, 3));
           } else if (G.ultType === 'eagleFlight') {
             // Pass through
             continue;
@@ -11562,6 +11564,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 20;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           } else if (G.ultType === 'poisonArmor') {
             // Poison armor passes through and poisons enemies
@@ -11577,6 +11580,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 10;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           } else if (G.ultType === 'monkeyFriend') {
             // Monkey friend makes player invincible, but monkey handles the crushing
@@ -11595,6 +11599,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 12;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           } else if (G.ultType === 'windSword') {
             // Kazuya: Wind sword cuts all enemies
@@ -11610,6 +11615,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 15;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           } else if (G.ultType === 'darkAura') {
             // Togami: Dark aura crushes enemies
@@ -11625,6 +11631,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 18;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           } else if (G.ultType === 'paperWings') {
             // Kagi: Paper wings slice through enemies
@@ -11640,6 +11647,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 16;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           }
         } else {
@@ -11660,6 +11668,7 @@
             }
             G.obstacles.splice(i, 1);
             G.score += 10;
+            G.coins += Math.floor(rand(1, 3));
             continue;
           }
           
@@ -11709,6 +11718,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 15;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
@@ -11737,6 +11747,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 18;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
@@ -11757,6 +11768,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 20;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
@@ -11777,6 +11789,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 18;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
@@ -11797,6 +11810,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 20;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
@@ -11817,6 +11831,7 @@
           }
           G.obstacles.splice(i, 1);
           G.score += 16;
+          G.coins += Math.floor(rand(1, 3));
           continue;
         }
       }
