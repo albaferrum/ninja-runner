@@ -1658,7 +1658,7 @@
             <div class="dojo-item-desc">Her oyuna +1 can ile başla!</div>
           </div>
           <div class="dojo-item-right">
-            <div class="dojo-item-price">🪙 1500</div>
+            <div class="dojo-item-price" id="dojoExtraLifePrice">🪙 1000</div>
             <button class="dojo-buy-btn" id="buyExtraLife">Satın Al</button>
             <div class="dojo-item-status" id="dojoExtraLifeStatus">x0</div>
           </div>
@@ -3818,9 +3818,11 @@
       buyDoubleJump.disabled = true;
     }
 
-    // Extra Lives
+    // Extra Lives - dynamic pricing: 1000 + (owned * 500)
+    const extraLifePrice = 1000 + (permBonuses.extraLives * 500);
+    document.getElementById('dojoExtraLifePrice').textContent = `🪙 ${extraLifePrice}`;
     dojoExtraLifeStatus.textContent = `Mevcut: +${permBonuses.extraLives} can`;
-    if (G.coins >= 1500) {
+    if (G.coins >= extraLifePrice) {
       dojoExtraLife.classList.remove('cant-afford');
       buyExtraLife.disabled = false;
     } else {
@@ -3890,8 +3892,9 @@
   });
 
   buyExtraLife.addEventListener('click', async () => {
-    if (G.coins < 1500) return;
-    G.coins -= 1500;
+    const extraLifePrice = 1000 + (permBonuses.extraLives * 500);
+    if (G.coins < extraLifePrice) return;
+    G.coins -= extraLifePrice;
     permBonuses.extraLives += 1;
     await saveUserData();
     // Track dojo purchase
