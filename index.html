@@ -2832,7 +2832,8 @@
     maxdownDefeated: false,
     fortiusDefeated: false,
     zasetsuDefeated: false,
-    currentBossType: null, // 'riaru', 'maxdown', 'fortius', or 'zasetsu'
+    cynicDefeated: false,
+    currentBossType: null, // 'riaru', 'maxdown', 'fortius', 'zasetsu', or 'cynic'
     boss: null,
     bossProjectiles: [],
     bossAttackTimer: 0,
@@ -2846,6 +2847,10 @@
     // Stun state (Zasetsu)
     playerStunned: false,
     stunTimer: 0,
+    
+    // Meteor state (Cynic)
+    meteors: [],
+    meteorWarning: false,
 
     // Parchment/Scroll system
     scrolls: [],
@@ -3813,6 +3818,17 @@
     attackCooldown: 2.5,
     darkAuraCooldown: 4,
     stunDuration: 1.5
+  };
+
+  const BOSS_CYNIC = {
+    name: 'CYNIC-V1',
+    maxHp: 5500,
+    width: 160,
+    height: 200,
+    x: 360,
+    attackCooldown: 2.0,
+    meteorCooldown: 3.5,
+    meteorCount: 5
   };
 
   // ===== PLAYER =====
@@ -6769,6 +6785,7 @@
     G.maxdownDefeated = false;
     G.fortiusDefeated = false;
     G.zasetsuDefeated = false;
+    G.cynicDefeated = false;
     G.currentBossType = null;
     G.boss = null;
     G.bossProjectiles = [];
@@ -6780,6 +6797,8 @@
     G.laserTimer = 0;
     G.playerStunned = false;
     G.stunTimer = 0;
+    G.meteors = [];
+    G.meteorWarning = false;
 
     // Scroll/parchment reset
     G.scrolls = [];
@@ -6966,6 +6985,26 @@
       G.bossUltiTimer = BOSS_ZASETSU.darkAuraCooldown;
       G.darkAuraActive = false;
       G.darkAura = null;
+    } else if (bossType === 'cynic') {
+      G.boss = {
+        hp: BOSS_CYNIC.maxHp,
+        maxHp: BOSS_CYNIC.maxHp,
+        x: WORLD_W + 150,
+        targetX: BOSS_CYNIC.x,
+        y: G.groundY - 50, // Floating robot
+        w: BOSS_CYNIC.width,
+        h: BOSS_CYNIC.height,
+        phase: 0,
+        attacking: false,
+        attackAnim: 0,
+        wingPhase: 0,
+        hoverPhase: 0,
+        eyeGlow: 0
+      };
+      G.bossAttackTimer = 2;
+      G.bossUltiTimer = BOSS_CYNIC.meteorCooldown;
+      G.meteors = [];
+      G.meteorWarning = false;
     }
     
     G.bossProjectiles = [];
@@ -7283,6 +7322,112 @@
       }
     }
     
+    // CYNIC meteor attack
+    if (G.currentBossType === 'cynic' && boss.x <= boss.targetX) {
+      G.bossUltiTimer -= dt;
+      
+      // Animation phases
+      boss.wingPhase = (boss.wingPhase || 0) + dt * 6;
+      boss.hoverPhase = (boss.hoverPhase || 0) + dt * 2;
+      boss.eyeGlow = (boss.eyeGlow || 0) + dt * 4;
+      
+      // Hover up and down
+      boss.y = G.groundY - 50 + Math.sin(boss.hoverPhase) * 20;
+      
+      // Meteor warning
+      G.meteorWarning = G.bossUltiTimer <= 2 && G.bossUltiTimer > 0 && G.meteors.length === 0;
+      
+      if (G.bossUltiTimer <= 0 && G.meteors.length === 0) {
+        // Spawn meteors!
+        G.meteorWarning = false;
+        boss.attacking = true;
+        boss.attackAnim = 1.5;
+        
+        for (let i = 0; i < BOSS_CYNIC.meteorCount; i++) {
+          G.meteors.push({
+            x: rand(50, WORLD_W - 100),
+            y: -50 - i * 80,
+            vy: 350 + rand(0, 100),
+            size: 25 + rand(0, 15),
+            rotation: rand(0, Math.PI * 2),
+            rotSpeed: rand(2, 5)
+          });
+        }
+        G.bossUltiTimer = BOSS_CYNIC.meteorCooldown;
+      }
+      
+      // Update meteors
+      for (let i = G.meteors.length - 1; i >= 0; i--) {
+        const m = G.meteors[i];
+        m.y += m.vy * dt;
+        m.rotation += m.rotSpeed * dt;
+        
+        // Trailing particles
+        if (Math.random() < 0.4) {
+          G.particles.push({
+            x: m.x + rand(-10, 10),
+            y: m.y - m.size,
+            vx: rand(-30, 30),
+            vy: rand(-50, -20),
+            life: rand(0.2, 0.4),
+            color: ['#ff6600', '#ff9900', '#ffcc00'][Math.floor(rand(0, 3))]
+          });
+        }
+        
+        // Ground collision
+        if (m.y >= G.groundY - m.size/2) {
+          // Explosion!
+          for (let k = 0; k < 15; k++) {
+            G.particles.push({
+              x: m.x,
+              y: G.groundY,
+              vx: rand(-150, 150),
+              vy: rand(-200, -50),
+              life: rand(0.3, 0.6),
+              color: ['#ff6600', '#ff9900', '#333'][Math.floor(rand(0, 3))]
+            });
+          }
+          G.meteors.splice(i, 1);
+          continue;
+        }
+        
+        // Player collision
+        const pr = playerRect();
+        const meteorRect = { x: m.x - m.size, y: m.y - m.size, w: m.size * 2, h: m.size * 2 };
+        const isInvincible = G.activeItem === 'lightning_armor';
+        const isFlying = G.ultActive && (G.ultType === 'eagleFlight' || G.ultType === 'moonlight' || G.ultType === 'iceStorm');
+        
+        if (!isInvincible && !isFlying && rectsOverlap(pr, meteorRect)) {
+          G.lives--;
+          
+          // Hit explosion
+          for (let k = 0; k < 12; k++) {
+            G.particles.push({
+              x: m.x,
+              y: m.y,
+              vx: rand(-100, 100),
+              vy: rand(-100, 100),
+              life: rand(0.3, 0.5),
+              color: ['#ff6600', '#ff0000'][Math.floor(rand(0, 2))]
+            });
+          }
+          
+          G.meteors.splice(i, 1);
+          
+          if (G.lives <= 0) {
+            G.gameOver = true;
+            G.running = false;
+            G.bossActive = false;
+            G.boss = null;
+            G.meteors = [];
+            canvas.classList.remove('ult-active');
+            setTimeout(() => showLeaderboard(G.score), 500);
+            return;
+          }
+        }
+      }
+    }
+    
     // Update stun timer
     if (G.playerStunned) {
       G.stunTimer -= dt;
@@ -7520,6 +7665,38 @@
           color: ['#a855f7', '#c084fc', '#d946ef'][Math.floor(rand(0, 3))]
         });
       }
+    } else if (G.currentBossType === 'cynic') {
+      // Cynic - energy laser bursts from robot
+      boss.attacking = true;
+      boss.attackAnim = 0.7;
+      
+      // Fire blue energy lasers
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+          if (!G.boss || G.currentBossType !== 'cynic') return;
+          G.bossProjectiles.push({
+            x: boss.x - 40,
+            y: boss.y - boss.h * 0.3 + (i - 1.5) * 25,
+            vx: -350 - rand(0, 80),
+            vy: (i - 1.5) * 35,
+            life: 4,
+            type: 'cyniclaser',
+            size: 14 + rand(0, 6)
+          });
+        }, i * 100);
+      }
+      
+      // Blue energy particles
+      for (let i = 0; i < 14; i++) {
+        G.particles.push({
+          x: boss.x + rand(-30, 10),
+          y: boss.y - boss.h * 0.4 + rand(-40, 40),
+          vx: rand(-180, -60),
+          vy: rand(-50, 50),
+          life: rand(0.3, 0.5),
+          color: ['#00bfff', '#0088ff', '#00d4ff', '#66e0ff'][Math.floor(rand(0, 4))]
+        });
+      }
     } else {
       boss.attacking = true;
       boss.attackAnim = 0.5;
@@ -7556,7 +7733,13 @@
     const bossType = G.currentBossType;
     let bonus, coinReward, particleColors;
     
-    if (bossType === 'zasetsu') {
+    if (bossType === 'cynic') {
+      bonus = 3000;
+      coinReward = 600;
+      particleColors = ['#00bfff', '#0088ff', '#00d4ff', '#66e0ff'];
+      G.cynicDefeated = true;
+      G.meteors = [];
+    } else if (bossType === 'zasetsu') {
       bonus = 2000;
       coinReward = 400;
       particleColors = ['#1a1a2e', '#533483', '#4a0080', '#6b21a8'];
@@ -11823,7 +12006,7 @@
       }
     }
 
-    // Boss spawn at 500 points (Riaru), 1500 points (MAXDOWN), 5000 points (Fortius), 10000 points (Zasetsu)
+    // Boss spawn at 500 points (Riaru), 1500 points (MAXDOWN), 5000 points (Fortius), 10000 points (Zasetsu), 15000 points (Cynic)
     if (!G.bossActive && G.score >= 500) {
       if (!G.riaru1Defeated && G.score >= 500) {
         spawnBoss('riaru');
@@ -11833,6 +12016,8 @@
         spawnBoss('fortius');
       } else if (G.riaru1Defeated && G.maxdownDefeated && G.fortiusDefeated && !G.zasetsuDefeated && G.score >= 10000) {
         spawnBoss('zasetsu');
+      } else if (G.riaru1Defeated && G.maxdownDefeated && G.fortiusDefeated && G.zasetsuDefeated && !G.cynicDefeated && G.score >= 15000) {
+        spawnBoss('cynic');
       }
     }
 
@@ -12426,6 +12611,10 @@
         drawDarkAuraWarning();
         drawDarkAura();
         drawStunEffect();
+      } else if (G.currentBossType === 'cynic') {
+        drawCynic();
+        drawMeteorWarning();
+        drawMeteors();
       } else {
         drawBoss();
       }
@@ -12471,6 +12660,10 @@
     }
     if (G.currentBossType === 'zasetsu') {
       drawZasetsu();
+      return;
+    }
+    if (G.currentBossType === 'cynic') {
+      drawCynic();
       return;
     }
     
@@ -13515,6 +13708,337 @@
     ctx.restore();
   }
 
+  function drawCynic() {
+    if (!G.boss || G.currentBossType !== 'cynic') return;
+    
+    const boss = G.boss;
+    ctx.save();
+    
+    const x = boss.x;
+    const y = boss.y;
+    const w = boss.w;
+    const h = boss.h;
+    
+    const wingPhase = boss.wingPhase || 0;
+    const hoverPhase = boss.hoverPhase || 0;
+    const eyeGlow = boss.eyeGlow || 0;
+    
+    // Hover offset
+    const hoverY = Math.sin(hoverPhase) * 12;
+    
+    // Shadow under robot
+    ctx.fillStyle = 'rgba(0, 80, 150, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, G.groundY - 5, w * 0.6, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Body glow
+    ctx.shadowColor = '#00bfff';
+    ctx.shadowBlur = 40;
+    
+    // Main robot body - large armored torso
+    ctx.fillStyle = '#1a3a5c';
+    ctx.strokeStyle = '#00bfff';
+    ctx.lineWidth = 3;
+    
+    // Torso (hexagonal shape)
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.2, y - h * 0.8 + hoverY);
+    ctx.lineTo(x + w * 0.8, y - h * 0.8 + hoverY);
+    ctx.lineTo(x + w, y - h * 0.4 + hoverY);
+    ctx.lineTo(x + w * 0.9, y + hoverY);
+    ctx.lineTo(x + w * 0.1, y + hoverY);
+    ctx.lineTo(x, y - h * 0.4 + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Chest core
+    const coreGlow = 0.5 + Math.sin(eyeGlow * 2) * 0.5;
+    const coreGradient = ctx.createRadialGradient(
+      x + w/2, y - h * 0.5 + hoverY, 5,
+      x + w/2, y - h * 0.5 + hoverY, 30
+    );
+    coreGradient.addColorStop(0, `rgba(0, 255, 255, ${coreGlow})`);
+    coreGradient.addColorStop(0.5, 'rgba(0, 191, 255, 0.6)');
+    coreGradient.addColorStop(1, 'rgba(0, 102, 204, 0)');
+    ctx.fillStyle = coreGradient;
+    ctx.beginPath();
+    ctx.arc(x + w/2, y - h * 0.5 + hoverY, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner core
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(x + w/2, y - h * 0.5 + hoverY, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Head - angular robot head
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#0d2840';
+    ctx.strokeStyle = '#00bfff';
+    ctx.lineWidth = 2;
+    
+    const headY = y - h * 0.85 + hoverY;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.3, headY - 30);
+    ctx.lineTo(x + w * 0.7, headY - 30);
+    ctx.lineTo(x + w * 0.75, headY);
+    ctx.lineTo(x + w * 0.25, headY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Visor / Eyes
+    const visorGlow = 0.7 + Math.sin(eyeGlow * 3) * 0.3;
+    ctx.fillStyle = `rgba(0, 255, 255, ${visorGlow})`;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 15;
+    ctx.fillRect(x + w * 0.32, headY - 22, w * 0.36, 10);
+    
+    // Eye dots
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.4, headY - 17, 4, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.6, headY - 17, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Wings
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = '#0d3050';
+    ctx.strokeStyle = '#00bfff';
+    ctx.lineWidth = 2;
+    
+    const wingFlap = Math.sin(wingPhase) * 15;
+    
+    // Left wing
+    ctx.beginPath();
+    ctx.moveTo(x, y - h * 0.6 + hoverY);
+    ctx.lineTo(x - 60 - wingFlap, y - h * 0.9 + hoverY);
+    ctx.lineTo(x - 80 - wingFlap * 1.5, y - h * 0.6 + hoverY);
+    ctx.lineTo(x - 50 - wingFlap, y - h * 0.3 + hoverY);
+    ctx.lineTo(x, y - h * 0.4 + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Right wing
+    ctx.beginPath();
+    ctx.moveTo(x + w, y - h * 0.6 + hoverY);
+    ctx.lineTo(x + w + 60 + wingFlap, y - h * 0.9 + hoverY);
+    ctx.lineTo(x + w + 80 + wingFlap * 1.5, y - h * 0.6 + hoverY);
+    ctx.lineTo(x + w + 50 + wingFlap, y - h * 0.3 + hoverY);
+    ctx.lineTo(x + w, y - h * 0.4 + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Wing thrusters
+    const thrusterGlow = 0.6 + Math.sin(eyeGlow * 4) * 0.4;
+    ctx.fillStyle = `rgba(0, 200, 255, ${thrusterGlow})`;
+    ctx.beginPath();
+    ctx.arc(x - 40 - wingFlap, y - h * 0.55 + hoverY, 8, 0, Math.PI * 2);
+    ctx.arc(x + w + 40 + wingFlap, y - h * 0.55 + hoverY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Arms / weapons
+    ctx.fillStyle = '#1a3a5c';
+    ctx.strokeStyle = '#00bfff';
+    ctx.lineWidth = 2;
+    
+    // Left arm cannon
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - h * 0.4 + hoverY);
+    ctx.lineTo(x - 30, y - h * 0.3 + hoverY);
+    ctx.lineTo(x - 45, y - h * 0.25 + hoverY);
+    ctx.lineTo(x - 40, y - h * 0.15 + hoverY);
+    ctx.lineTo(x - 10, y - h * 0.2 + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Right arm cannon
+    ctx.beginPath();
+    ctx.moveTo(x + w + 5, y - h * 0.4 + hoverY);
+    ctx.lineTo(x + w + 30, y - h * 0.3 + hoverY);
+    ctx.lineTo(x + w + 45, y - h * 0.25 + hoverY);
+    ctx.lineTo(x + w + 40, y - h * 0.15 + hoverY);
+    ctx.lineTo(x + w + 10, y - h * 0.2 + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Arm cannon glow
+    ctx.fillStyle = `rgba(0, 200, 255, ${thrusterGlow})`;
+    ctx.beginPath();
+    ctx.arc(x - 42, y - h * 0.2 + hoverY, 6, 0, Math.PI * 2);
+    ctx.arc(x + w + 42, y - h * 0.2 + hoverY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Legs / thrusters
+    ctx.fillStyle = '#0d2840';
+    ctx.strokeStyle = '#00bfff';
+    
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.2, y + hoverY);
+    ctx.lineTo(x + w * 0.15, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.35, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.35, y + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.65, y + hoverY);
+    ctx.lineTo(x + w * 0.65, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.85, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.8, y + hoverY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Leg thrusters (flame effect)
+    const flameHeight = 20 + Math.sin(eyeGlow * 8) * 8;
+    const flameGradient = ctx.createLinearGradient(0, y + 40 + hoverY, 0, y + 40 + hoverY + flameHeight);
+    flameGradient.addColorStop(0, 'rgba(0, 200, 255, 0.9)');
+    flameGradient.addColorStop(0.5, 'rgba(0, 150, 255, 0.5)');
+    flameGradient.addColorStop(1, 'rgba(0, 100, 200, 0)');
+    ctx.fillStyle = flameGradient;
+    
+    // Left thruster flame
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.15, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.25, y + 40 + hoverY + flameHeight);
+    ctx.lineTo(x + w * 0.35, y + 40 + hoverY);
+    ctx.fill();
+    
+    // Right thruster flame
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.65, y + 40 + hoverY);
+    ctx.lineTo(x + w * 0.75, y + 40 + hoverY + flameHeight);
+    ctx.lineTo(x + w * 0.85, y + 40 + hoverY);
+    ctx.fill();
+    
+    // Floating energy orbs
+    ctx.shadowBlur = 10;
+    for (let i = 0; i < 4; i++) {
+      const angle = eyeGlow * 0.5 + (i * Math.PI * 2 / 4);
+      const dist = 100 + Math.sin(eyeGlow + i) * 15;
+      const ox = x + w/2 + Math.cos(angle) * dist;
+      const oy = y - h/2 + hoverY + Math.sin(angle) * dist * 0.6;
+      ctx.fillStyle = `rgba(0, 200, 255, ${0.4 + Math.sin(eyeGlow + i) * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 6 + Math.sin(eyeGlow * 2 + i) * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Name tag
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#00bfff';
+    ctx.fillStyle = '#00bfff';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CYNIC-V1', x + w/2, headY - 50);
+    
+    ctx.restore();
+  }
+
+  function drawMeteorWarning() {
+    if (!G.meteorWarning || !G.boss || G.currentBossType !== 'cynic') return;
+    
+    ctx.save();
+    
+    const flash = Math.sin(Date.now() / 70) > 0;
+    
+    if (flash) {
+      // Warning text - "DENE VE GÖR!"
+      ctx.fillStyle = '#00bfff';
+      ctx.font = 'bold 40px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#00bfff';
+      ctx.shadowBlur = 30;
+      ctx.fillText('DENE VE GÖR!', WORLD_W / 2, 120);
+      
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#ff6600';
+      ctx.shadowColor = '#ff6600';
+      ctx.fillText('☄️ METEOR YAĞMURU GELİYOR! ☄️', WORLD_W / 2, 160);
+    }
+    
+    // Sky warning effect
+    ctx.fillStyle = 'rgba(255, 100, 0, 0.1)';
+    ctx.fillRect(0, 0, WORLD_W, 150);
+    
+    ctx.restore();
+  }
+
+  function drawMeteors() {
+    if (G.meteors.length === 0) return;
+    
+    ctx.save();
+    
+    for (const m of G.meteors) {
+      // Fire trail
+      const trailGradient = ctx.createLinearGradient(m.x, m.y - m.size * 3, m.x, m.y);
+      trailGradient.addColorStop(0, 'rgba(255, 102, 0, 0)');
+      trailGradient.addColorStop(0.5, 'rgba(255, 153, 0, 0.5)');
+      trailGradient.addColorStop(1, 'rgba(255, 200, 0, 0.8)');
+      ctx.fillStyle = trailGradient;
+      ctx.beginPath();
+      ctx.moveTo(m.x - m.size * 0.4, m.y);
+      ctx.lineTo(m.x, m.y - m.size * 3);
+      ctx.lineTo(m.x + m.size * 0.4, m.y);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Meteor glow
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 25;
+      
+      // Main meteor body
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rotation);
+      
+      const meteorGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, m.size);
+      meteorGradient.addColorStop(0, '#ffcc00');
+      meteorGradient.addColorStop(0.3, '#ff9900');
+      meteorGradient.addColorStop(0.7, '#ff6600');
+      meteorGradient.addColorStop(1, '#cc3300');
+      ctx.fillStyle = meteorGradient;
+      
+      // Irregular meteor shape
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const r = m.size * (0.8 + Math.sin(angle * 3 + m.rotation) * 0.2);
+        if (i === 0) {
+          ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        } else {
+          ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+      }
+      ctx.closePath();
+      ctx.fill();
+      
+      // Hot core
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, m.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    
+    ctx.restore();
+  }
+
   function drawLaserWarning() {
     if (!G.laserWarning || !G.boss) return;
     
@@ -13735,6 +14259,37 @@
       ctx.fill();
       
       ctx.shadowBlur = 0;
+    } else if (p.type === 'cyniclaser') {
+      // Cynic blue energy laser
+      ctx.shadowColor = '#00bfff';
+      ctx.shadowBlur = 25;
+      
+      // Outer blue glow
+      ctx.fillStyle = 'rgba(0, 191, 255, 0.4)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size + 10, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Main laser bolt
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.3, '#66e0ff');
+      gradient.addColorStop(0.7, '#00bfff');
+      gradient.addColorStop(1, '#0066ff');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner core
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
     }
     
     ctx.restore();
@@ -13745,7 +14300,10 @@
     
     // Boss name
     let bossName, nameColor;
-    if (G.currentBossType === 'zasetsu') {
+    if (G.currentBossType === 'cynic') {
+      bossName = '🤖 CYNIC-V1 🤖';
+      nameColor = '#00bfff';
+    } else if (G.currentBossType === 'zasetsu') {
       bossName = '👁️ ZASETSU 👁️';
       nameColor = '#ff0044';
     } else if (G.currentBossType === 'fortius') {
@@ -13769,14 +14327,19 @@
     
     // HP bar
     const hpPercent = boss.hp / boss.maxHp;
-    const hpColor = G.currentBossType === 'maxdown' 
-      ? (hpPercent > 0.5 ? '#ff3333' : hpPercent > 0.25 ? '#ff6600' : '#ff0000')
-      : (hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#eab308' : '#ef4444');
+    let hpColor;
+    if (G.currentBossType === 'maxdown') {
+      hpColor = hpPercent > 0.5 ? '#ff3333' : hpPercent > 0.25 ? '#ff6600' : '#ff0000';
+    } else if (G.currentBossType === 'cynic') {
+      hpColor = hpPercent > 0.5 ? '#00bfff' : hpPercent > 0.25 ? '#0088ff' : '#ff4444';
+    } else {
+      hpColor = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#eab308' : '#ef4444';
+    }
     ctx.fillStyle = hpColor;
     ctx.fillRect(WORLD_W / 2 - 98, 42, 196 * hpPercent, 12);
     
     // HP bar border
-    ctx.strokeStyle = G.currentBossType === 'maxdown' ? '#ff3333' : '#fff';
+    ctx.strokeStyle = G.currentBossType === 'maxdown' ? '#ff3333' : G.currentBossType === 'cynic' ? '#00bfff' : '#fff';
     ctx.lineWidth = 2;
     ctx.strokeRect(WORLD_W / 2 - 100, 40, 200, 16);
     
